@@ -56,6 +56,52 @@ public class UnitTest1
             point => Assert.False(string.IsNullOrWhiteSpace(point.ExtensionsRawXml)));
     }
 
+    [Fact]
+    public void SplitAtIndex_SplitsIntoTwoTracks_WithExpectedPointCounts()
+    {
+        var source = BuildSampleTrack();
+
+        var result = TrackRangeOperations.SplitAtIndex(source, 3);
+
+        Assert.Equal(3, result.FirstPart.TotalPoints);
+        Assert.Equal(2, result.SecondPart.TotalPoints);
+        Assert.Equal(10.0, result.FirstPart.Segments[0].Points[0].Latitude);
+        Assert.Equal(13.0, result.SecondPart.Segments[0].Points[0].Latitude);
+    }
+
+    [Fact]
+    public void SplitAtIndex_PreservesExtensionsInBothParts()
+    {
+        var source = BuildSampleTrack();
+
+        var result = TrackRangeOperations.SplitAtIndex(source, 2);
+
+        Assert.All(
+            result.FirstPart.Segments.SelectMany(segment => segment.Points),
+            point => Assert.False(string.IsNullOrWhiteSpace(point.ExtensionsRawXml)));
+        Assert.All(
+            result.SecondPart.Segments.SelectMany(segment => segment.Points),
+            point => Assert.False(string.IsNullOrWhiteSpace(point.ExtensionsRawXml)));
+    }
+
+    [Fact]
+    public void SplitAtIndex_Throws_WhenIndexIsOutOfRange()
+    {
+        var source = BuildSampleTrack();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackRangeOperations.SplitAtIndex(source, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackRangeOperations.SplitAtIndex(source, source.TotalPoints));
+    }
+
+    [Fact]
+    public void DeleteRange_Throws_WhenSelectionOutsideBounds()
+    {
+        var source = BuildSampleTrack();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackRangeOperations.DeleteRange(source, -1, 2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackRangeOperations.DeleteRange(source, 1, 99));
+    }
+
     private static TrackDocument BuildSampleTrack()
     {
         var baseTime = DateTimeOffset.Parse("2026-01-01T00:00:00Z");

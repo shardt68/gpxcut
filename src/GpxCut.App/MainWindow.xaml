@@ -30,6 +30,13 @@
                 Content="Save GPX"
                 IsEnabled="False"
                 Click="SaveFileButton_Click" />
+            <Button x:Name="SplitTrackButton"
+                Width="130"
+                Height="34"
+                Margin="8,0,0,0"
+                Content="Split Track"
+                IsEnabled="False"
+                Click="SplitTrackButton_Click" />
             <Button x:Name="DeleteRangeButton"
                 Width="130"
                 Height="34"

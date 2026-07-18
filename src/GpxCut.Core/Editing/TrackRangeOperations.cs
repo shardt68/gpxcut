@@ -9,6 +9,7 @@ public sealed record RangeSelection(int StartIndex, int EndIndexExclusive)
 }
 
 public sealed record DeleteRangeResult(TrackDocument ModifiedTrack, int DeletedPoints);
+public sealed record SplitTrackResult(TrackDocument FirstPart, TrackDocument SecondPart);
 
 public static class TrackRangeOperations
 {
@@ -121,12 +122,79 @@ public static class TrackRangeOperations
         };
     }
 
+    public static SplitTrackResult SplitAtIndex(TrackDocument source, int splitIndex)
+    {
+        ValidateSplitIndex(source, splitIndex);
+
+        var firstSegments = new List<TrackSegment>(source.Segments.Count);
+        var secondSegments = new List<TrackSegment>(source.Segments.Count);
+        var firstMetadata = new TrackMetadata();
+        var secondMetadata = new TrackMetadata();
+        var globalIndex = 0;
+
+        foreach (var segment in source.Segments)
+        {
+            var firstPoints = new List<TrackPoint>(segment.Points.Count);
+            var secondPoints = new List<TrackPoint>(segment.Points.Count);
+
+            foreach (var point in segment.Points)
+            {
+                if (globalIndex < splitIndex)
+                {
+                    firstPoints.Add(point);
+                    firstMetadata.IncludePoint(point.Latitude, point.Longitude, point.Time);
+                }
+                else
+                {
+                    secondPoints.Add(point);
+                    secondMetadata.IncludePoint(point.Latitude, point.Longitude, point.Time);
+                }
+
+                globalIndex++;
+            }
+
+            if (firstPoints.Count > 0)
+            {
+                firstSegments.Add(new TrackSegment { Points = firstPoints });
+            }
+
+            if (secondPoints.Count > 0)
+            {
+                secondSegments.Add(new TrackSegment { Points = secondPoints });
+            }
+        }
+
+        var first = new TrackDocument
+        {
+            Name = BuildSplitName(source.Name, part: 1),
+            Description = source.Description,
+            Segments = firstSegments,
+            Metadata = firstMetadata
+        };
+
+        var second = new TrackDocument
+        {
+            Name = BuildSplitName(source.Name, part: 2),
+            Description = source.Description,
+            Segments = secondSegments,
+            Metadata = secondMetadata
+        };
+
+        return new SplitTrackResult(first, second);
+    }
+
     private static string BuildExportName(string? sourceName, RangeSelection selection)
     {
         var baseName = string.IsNullOrWhiteSpace(sourceName) ? "track" : sourceName.Trim();
         return string.Create(
             CultureInfo.InvariantCulture,
             $"{baseName} [{selection.StartIndex}..{selection.EndIndexExclusive})");
+    }
+
+    private static string BuildSplitName(string? sourceName, int part)
+    {
+        var baseName = string.IsNullOrWhiteSpace(sourceName) ? "track" : sourceName.Trim();
+        return string.Create(CultureInfo.InvariantCulture, $"{baseName} part {part}");
     }
 
     private static void ValidateSelection(TrackDocument source, RangeSelection selection)
@@ -144,6 +212,19 @@ public static class TrackRangeOperations
         if (selection.EndIndexExclusive <= selection.StartIndex)
         {
             throw new ArgumentOutOfRangeException(nameof(selection), "The selected range must contain at least one point.");
+        }
+    }
+
+    private static void ValidateSplitIndex(TrackDocument source, int splitIndex)
+    {
+        if (source.TotalPoints <= 1)
+        {
+            throw new InvalidOperationException("The track must contain at least two points to split.");
+        }
+
+        if (splitIndex <= 0 || splitIndex >= source.TotalPoints)
+        {
+            throw new ArgumentOutOfRangeException(nameof(splitIndex), "Split index must be between 1 and totalPoints-1.");
         }
     }
 }

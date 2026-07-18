@@ -19,6 +19,7 @@ namespace GpxCut.App;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private static readonly object LogSync = new();
     private readonly GpxReader _gpxReader = new();
     private readonly GpxWriter _gpxWriter = new();
     private readonly string? _startupFilePath;
@@ -73,6 +74,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            LogError("MAP_INIT", ex, "InitializeMapAsync");
             SetStatus($"Map initialization failed: {ex.Message}");
         }
     }
@@ -155,6 +157,7 @@ public partial class MainWindow : Window
         }
         catch (Exception)
         {
+            LogError("MAP_MSG", null, "HandleWebMessageAsync malformed message");
             // Ignore malformed or unexpected map messages.
         }
     }
@@ -217,11 +220,13 @@ public partial class MainWindow : Window
         }
         catch (GpxReadException ex)
         {
+            LogError("GPX_READ", ex, filePath);
             TrackSummaryTextBlock.Text = "Load failed.";
             SetStatus($"GPX error: {ex.Message}");
         }
         catch (Exception ex)
         {
+            LogError("LOAD", ex, filePath);
             TrackSummaryTextBlock.Text = "Load failed.";
             SetStatus($"Unexpected error: {ex.Message}");
         }
@@ -539,9 +544,120 @@ public partial class MainWindow : Window
     {
         OpenFileButton.IsEnabled = !_isBusy;
         SaveFileButton.IsEnabled = !_isBusy && _currentDocument is not null && _hasUnsavedChanges;
+        SplitTrackButton.IsEnabled = !_isBusy && _currentDocument is not null && GetSplitIndex() is not null;
         var hasRange = GetNormalizedSelection() is not null;
         DeleteRangeButton.IsEnabled = !_isBusy && hasRange;
         ExportRangeButton.IsEnabled = !_isBusy && hasRange;
+    }
+
+    private int? GetSplitIndex()
+    {
+        if (_currentDocument is null)
+        {
+            return null;
+        }
+
+        var candidate = _selectionStartIndex;
+        if (candidate is null)
+        {
+            var normalized = GetNormalizedSelection();
+            candidate = normalized?.StartIndex;
+        }
+
+        if (candidate is null)
+        {
+            return null;
+        }
+
+        if (candidate <= 0 || candidate >= _currentDocument.TotalPoints)
+        {
+            return null;
+        }
+
+        return candidate;
+    }
+
+    private async void SplitTrackButton_Click(object sender, RoutedEventArgs e)
+    {
+        await SplitTrackAsync();
+    }
+
+    private async Task SplitTrackAsync()
+    {
+        if (_isBusy || _currentDocument is null)
+        {
+            return;
+        }
+
+        var splitIndex = GetSplitIndex();
+        if (splitIndex is null)
+        {
+            SetStatus("Set a valid start marker between first and last point for split.");
+            return;
+        }
+
+        var defaultPart1 = BuildSplitFileName(_currentDocument.Name, part: 1);
+        var part1Dialog = new SaveFileDialog
+        {
+            Title = "Save first split track",
+            Filter = "GPX files (*.gpx)|*.gpx|All files (*.*)|*.*",
+            AddExtension = true,
+            DefaultExt = ".gpx",
+            OverwritePrompt = true,
+            FileName = defaultPart1
+        };
+
+        var initialDirectory = GetDefaultSaveDirectory();
+        if (!string.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
+        {
+            part1Dialog.InitialDirectory = initialDirectory;
+        }
+
+        if (part1Dialog.ShowDialog(this) != true)
+        {
+            SetStatus("Split canceled.");
+            return;
+        }
+
+        var part2Dialog = new SaveFileDialog
+        {
+            Title = "Save second split track",
+            Filter = "GPX files (*.gpx)|*.gpx|All files (*.*)|*.*",
+            AddExtension = true,
+            DefaultExt = ".gpx",
+            OverwritePrompt = true,
+            FileName = BuildSplitFileName(_currentDocument.Name, part: 2),
+            InitialDirectory = Path.GetDirectoryName(part1Dialog.FileName)
+        };
+
+        if (part2Dialog.ShowDialog(this) != true)
+        {
+            SetStatus("Split canceled.");
+            return;
+        }
+
+        _isBusy = true;
+        UpdateActionButtons();
+
+        try
+        {
+            var split = TrackRangeOperations.SplitAtIndex(_currentDocument, splitIndex.Value);
+            await _gpxWriter.WriteAsync(split.FirstPart, part1Dialog.FileName, CancellationToken.None);
+            await _gpxWriter.WriteAsync(split.SecondPart, part2Dialog.FileName, CancellationToken.None);
+
+            SetStatus(
+                $"Split exported at index {splitIndex.Value}: '{Path.GetFileName(part1Dialog.FileName)}' and '{Path.GetFileName(part2Dialog.FileName)}'.");
+        }
+        catch (Exception ex)
+        {
+            LogError("SPLIT", ex, $"index={splitIndex.Value}");
+            SetStatus($"Split failed: {ex.Message}");
+        }
+        finally
+        {
+            _isBusy = false;
+            UpdateActionButtons();
+        }
     }
 
     private void UpdateTrackSummary()
@@ -630,6 +746,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            LogError("DELETE", ex, "TryDeleteSelectedRangeAsync");
             SetStatus($"Delete failed: {ex.Message}");
         }
         finally
@@ -678,6 +795,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            LogError("EXPORT", ex, "ExportRangeButton_Click");
             SetStatus($"Export failed: {ex.Message}");
         }
         finally
@@ -747,6 +865,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            LogError("SAVE", ex, saveDialog.FileName);
             SetStatus($"Save failed: {ex.Message}");
         }
         finally
@@ -767,6 +886,14 @@ public partial class MainWindow : Window
         var invalid = Path.GetInvalidFileNameChars();
         var cleanName = string.Concat(baseName.Select(ch => invalid.Contains(ch) ? '_' : ch));
         return $"{cleanName}.gpx";
+    }
+
+    private static string BuildSplitFileName(string? trackName, int part)
+    {
+        var baseName = string.IsNullOrWhiteSpace(trackName) ? "track" : trackName;
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleanName = string.Concat(baseName.Select(ch => invalid.Contains(ch) ? '_' : ch));
+        return $"{cleanName}_part{part}.gpx";
     }
 
     private string? GetDefaultSaveDirectory()
@@ -871,6 +998,28 @@ public partial class MainWindow : Window
         }
 
         StatusTextBlock.Text = message;
+    }
+
+    private static void LogError(string code, Exception? ex, string context)
+    {
+        try
+        {
+            var logRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GpxCut", "logs");
+            Directory.CreateDirectory(logRoot);
+
+            var logPath = Path.Combine(logRoot, $"gpxcut-{DateTime.UtcNow:yyyyMMdd}.log");
+            var line =
+                $"{DateTime.UtcNow:O} | {code} | {context} | {ex?.GetType().Name ?? "Info"} | {ex?.Message ?? "n/a"}{Environment.NewLine}";
+
+            lock (LogSync)
+            {
+                File.AppendAllText(logPath, line);
+            }
+        }
+        catch
+        {
+            // Logging must never break user workflows.
+        }
     }
 
     private sealed record IndexedTrackPoint(int GlobalIndex, int SegmentIndex, int PointIndex, TrackPoint Point);
