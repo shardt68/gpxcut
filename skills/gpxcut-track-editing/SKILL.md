@@ -46,6 +46,8 @@ Use this skill when the task mentions one or more of:
 
 See [project reference](references/REFERENCE.md) for overall architecture.
 
+- [Software Architecture](references/software-architecture.md)
+
 **Feature specifications** (detailed acceptance criteria, technical requirements, test strategy):
 - [Open GPX](references/features/open-gpx.md)
 - [Display Track on Map](references/features/display-track.md)

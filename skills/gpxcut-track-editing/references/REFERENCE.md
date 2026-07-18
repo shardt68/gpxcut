@@ -14,6 +14,10 @@ Each MVP operation has a dedicated feature specification:
 4. **[Delete Selected Range](features/delete-range.md)** – Remove contiguous range of points with segment cleanup
 5. **[Export Selected Part as GPX](features/export-segment.md)** – Save segment as valid GPX file compatible with external tools
 
+## Software Architecture
+
+- **[Software Architecture](software-architecture.md)** - Layered, hexagonal-inspired target architecture with data flow, responsibilities, quality attributes, and evolution path
+
 ## Architecture Boundaries
 
 - `src/GpxCut.App`: WPF UI and ViewModels
