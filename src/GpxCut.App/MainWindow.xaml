@@ -3,10 +3,40 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:GpxCut.App"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="GpxCut"
+        Height="760"
+        Width="1200"
+        MinHeight="640"
+        MinWidth="960">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
+        <DockPanel Grid.Row="0" Margin="12,10,12,8" LastChildFill="False">
+            <Button x:Name="OpenFileButton"
+                    Width="130"
+                    Height="34"
+                    Content="Open GPX"
+                    Click="OpenFileButton_Click" />
+            <TextBlock x:Name="TrackSummaryTextBlock"
+                       Margin="12,0,0,0"
+                       VerticalAlignment="Center"
+                       Text="No file loaded." />
+        </DockPanel>
+
+        <Border Grid.Row="1" Margin="12,0,12,8" CornerRadius="6" BorderBrush="#D4D4D8" BorderThickness="1">
+            <wv2:WebView2 x:Name="MapWebView" />
+        </Border>
+
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Ready." />
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </Window>

@@ -1,5 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GpxCut.Core\GpxCut.Core.csproj" />
+    <ProjectReference Include="..\..\src\GpxCut.MapBridge\GpxCut.MapBridge.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
