@@ -21,6 +21,7 @@ public partial class MainWindow : Window
 {
     private readonly GpxReader _gpxReader = new();
     private readonly GpxWriter _gpxWriter = new();
+    private readonly string? _startupFilePath;
     private bool _isMapReady;
     private bool _isBusy;
     private bool _hasUnsavedChanges;
@@ -36,7 +37,13 @@ public partial class MainWindow : Window
     private const int FastStepSize = 10;
 
     public MainWindow()
+        : this(null)
     {
+    }
+
+    public MainWindow(string? startupFilePath)
+    {
+        _startupFilePath = startupFilePath;
         InitializeComponent();
         Loaded += OnLoaded;
         PreviewKeyDown += OnPreviewKeyDown;
@@ -45,6 +52,11 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await InitializeMapAsync();
+
+        if (!string.IsNullOrWhiteSpace(_startupFilePath))
+        {
+            await OpenTrackFileAsync(_startupFilePath);
+        }
     }
 
     private async Task InitializeMapAsync()
@@ -149,17 +161,6 @@ public partial class MainWindow : Window
 
     private async void OpenFileButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isBusy)
-        {
-            return;
-        }
-
-        if (!_isMapReady)
-        {
-            SetStatus("Map is not ready yet.");
-            return;
-        }
-
         var openFileDialog = new OpenFileDialog
         {
             Title = "Open GPX file",
@@ -171,6 +172,28 @@ public partial class MainWindow : Window
             return;
         }
 
+        await OpenTrackFileAsync(openFileDialog.FileName);
+    }
+
+    private async Task OpenTrackFileAsync(string filePath)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        if (!_isMapReady)
+        {
+            SetStatus("Map is not ready yet.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            SetStatus($"GPX file not found: {filePath}");
+            return;
+        }
+
         _isBusy = true;
         UpdateActionButtons();
         SetStatus("Loading GPX...");
@@ -178,10 +201,10 @@ public partial class MainWindow : Window
 
         try
         {
-            var document = await _gpxReader.ReadAsync(openFileDialog.FileName, CancellationToken.None);
+            var document = await _gpxReader.ReadAsync(filePath, CancellationToken.None);
 
             _currentDocument = document;
-            _currentFilePath = openFileDialog.FileName;
+            _currentFilePath = filePath;
             _hasUnsavedChanges = false;
             RebuildIndex();
             ClearSelectionState();
