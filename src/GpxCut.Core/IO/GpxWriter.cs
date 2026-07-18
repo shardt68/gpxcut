@@ -28,6 +28,9 @@ public sealed class GpxWriter
         {
             Async = true,
             Indent = true,
+            IndentChars = "  ",
+            NewLineChars = "\n",
+            NewLineHandling = NewLineHandling.Replace,
             Encoding = System.Text.Encoding.UTF8
         };
 
@@ -133,7 +136,9 @@ public sealed class GpxWriter
         if (!string.IsNullOrWhiteSpace(point.ExtensionsRawXml))
         {
             var extensions = XElement.Parse(point.ExtensionsRawXml, LoadOptions.None);
-            await writer.WriteRawAsync(extensions.ToString(SaveOptions.DisableFormatting));
+            using var extensionsReader = extensions.CreateReader();
+            extensionsReader.MoveToContent();
+            await writer.WriteNodeAsync(extensionsReader, true);
         }
 
         await writer.WriteEndElementAsync();
