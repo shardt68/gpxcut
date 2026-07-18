@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="GpxCut"
+    Manufacturer="GpxCut"
+    Version="$(var.Version)"
+    UpgradeCode="6E1A58E6-8399-4A9E-A8B4-8B656E6F8AB7"
+    Language="1031">
+
+    <SummaryInformation Description="GpxCut GPX Track Editor" Manufacturer="GpxCut" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of GpxCut is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="GpxCut">
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="GpxCut" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**">
+        <Exclude Files="$(var.PublishDir)\**\*.pdb" />
+        <Exclude Files="$(var.PublishDir)\**\*.wixpdb" />
+      </Files>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

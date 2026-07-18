@@ -87,6 +87,36 @@ dotnet build -c Debug
 dotnet test -c Debug --no-build
 ```
 
+## 6a. App lokal starten
+
+Manuell:
+
+```powershell
+dotnet run --project src/GpxCut.App/GpxCut.App.csproj -c Debug
+```
+
+Per Skript:
+
+```powershell
+pwsh ./scripts/dev/run-app.ps1
+```
+
+## 6b. Dev-Helferskripte
+
+- Build: `pwsh ./scripts/dev/build-debug.ps1`
+- Tests: `pwsh ./scripts/dev/test-debug.ps1`
+- App starten: `pwsh ./scripts/dev/run-app.ps1`
+- Alles in einem: `pwsh ./scripts/dev/start-dev.ps1`
+- Build+Tests kombiniert: `pwsh ./skills/gpxcut-track-editing/scripts/validate-solution.ps1`
+
+Beispiele fuer `start-dev.ps1`:
+
+```powershell
+pwsh ./scripts/dev/start-dev.ps1
+pwsh ./scripts/dev/start-dev.ps1 -SkipTests
+pwsh ./scripts/dev/start-dev.ps1 -SkipBuild
+```
+
 ## 7. Was gilt als "Setup erfolgreich"
 
 Die Umgebung gilt als korrekt eingerichtet, wenn:
