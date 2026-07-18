@@ -23,6 +23,13 @@
                     Height="34"
                     Content="Open GPX"
                     Click="OpenFileButton_Click" />
+            <Button x:Name="SaveFileButton"
+                Width="130"
+                Height="34"
+                Margin="8,0,0,0"
+                Content="Save GPX"
+                IsEnabled="False"
+                Click="SaveFileButton_Click" />
             <Button x:Name="DeleteRangeButton"
                 Width="130"
                 Height="34"

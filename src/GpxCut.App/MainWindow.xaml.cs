@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Windows;
 using System.Text.Json;
+using System.Globalization;
+using System.Xml.Linq;
 using GpxCut.Core.IO;
 using GpxCut.Core.Domain;
 using GpxCut.Core.Editing;
@@ -21,13 +23,16 @@ public partial class MainWindow : Window
     private readonly GpxWriter _gpxWriter = new();
     private bool _isMapReady;
     private bool _isBusy;
+    private bool _hasUnsavedChanges;
 
     private TrackDocument? _currentDocument;
+    private string? _currentFilePath;
     private readonly List<IndexedTrackPoint> _indexedPoints = [];
     private int? _selectionStartIndex;
     private int? _selectionEndIndex;
 
     private const double ClickToleranceMeters = 20.0;
+    private const double HoverToleranceMeters = 35.0;
     private const int FastStepSize = 10;
 
     public MainWindow()
@@ -99,6 +104,24 @@ public partial class MainWindow : Window
             }
 
             var messageType = typeNode.GetString();
+
+            if (string.Equals(messageType, "map-hover-clear", StringComparison.OrdinalIgnoreCase))
+            {
+                await ExecuteScriptsAsync(MapScriptFactory.BuildClearHoverInfoScripts());
+                return;
+            }
+
+            if (string.Equals(messageType, "map-hover", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!root.TryGetProperty("lat", out var hoverLatNode) || !root.TryGetProperty("lng", out var hoverLonNode))
+                {
+                    return;
+                }
+
+                await HandleMapHoverAsync(hoverLatNode.GetDouble(), hoverLonNode.GetDouble());
+                return;
+            }
+
             if (!string.Equals(messageType, "map-click", StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -111,9 +134,12 @@ public partial class MainWindow : Window
 
             var latitude = latNode.GetDouble();
             var longitude = lonNode.GetDouble();
-            var shiftKey = root.TryGetProperty("shiftKey", out var shiftNode) && shiftNode.GetBoolean();
+            var shiftKeyFromMessage = root.TryGetProperty("shiftKey", out var shiftNode) && shiftNode.GetBoolean();
+            var useEndMarkerFromMessage = root.TryGetProperty("useEndMarker", out var endNode) && endNode.GetBoolean();
+            var shiftKey = shiftKeyFromMessage || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            var useEndMarker = useEndMarkerFromMessage || shiftKey;
 
-            await HandleMapClickSelectionAsync(latitude, longitude, shiftKey);
+            await HandleMapClickSelectionAsync(latitude, longitude, useEndMarker);
         }
         catch (Exception)
         {
@@ -155,10 +181,12 @@ public partial class MainWindow : Window
             var document = await _gpxReader.ReadAsync(openFileDialog.FileName, CancellationToken.None);
 
             _currentDocument = document;
+            _currentFilePath = openFileDialog.FileName;
+            _hasUnsavedChanges = false;
             RebuildIndex();
             ClearSelectionState();
 
-            await RenderTrackAsync(document);
+            await RenderTrackAsync(document, includeFitBounds: true);
             await ExecuteScriptsAsync(MapScriptFactory.BuildClearSelectionScripts());
 
             UpdateTrackSummary();
@@ -181,9 +209,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task RenderTrackAsync(TrackDocument document)
+    private async Task RenderTrackAsync(TrackDocument document, bool includeFitBounds)
     {
-        await ExecuteScriptsAsync(MapScriptFactory.BuildRenderScripts(document));
+        await ExecuteScriptsAsync(MapScriptFactory.BuildRenderScripts(document, includeFitBounds: includeFitBounds));
     }
 
     private async Task ExecuteScriptsAsync(IEnumerable<string> scripts)
@@ -230,6 +258,62 @@ public partial class MainWindow : Window
         await UpdateSelectionVisualizationAsync();
     }
 
+    private async Task HandleMapHoverAsync(double latitude, double longitude)
+    {
+        if (_isBusy || _currentDocument is null || _indexedPoints.Count == 0)
+        {
+            return;
+        }
+
+        var nearest = FindNearestPointIndex(latitude, longitude, HoverToleranceMeters);
+        if (nearest is null)
+        {
+            await ExecuteScriptsAsync(MapScriptFactory.BuildClearHoverInfoScripts());
+            return;
+        }
+
+        var indexedPoint = _indexedPoints[nearest.Value];
+        var point = indexedPoint.Point;
+        var speedKmh = TryGetSpeedKmh(indexedPoint.GlobalIndex);
+        var extensionSummary = BuildExtensionsSummary(point.ExtensionsRawXml);
+
+        var lines = new List<string>
+        {
+            string.Create(CultureInfo.InvariantCulture, $"Index: {indexedPoint.GlobalIndex} | Segment: {indexedPoint.SegmentIndex} | Punkt: {indexedPoint.PointIndex}"),
+            string.Create(CultureInfo.InvariantCulture, $"Lat/Lon: {point.Latitude:F6}, {point.Longitude:F6}")
+        };
+
+        if (point.Time is not null)
+        {
+            lines.Add($"Datum/Uhrzeit: {point.Time.Value.LocalDateTime:yyyy-MM-dd HH:mm:ss}");
+        }
+
+        if (point.Elevation is not null)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"Hoehe: {point.Elevation.Value:F1} m"));
+        }
+
+        if (speedKmh is not null)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"Geschwindigkeit: {speedKmh.Value:F1} km/h"));
+        }
+        else
+        {
+            lines.Add("Geschwindigkeit: n/a");
+        }
+
+        if (!string.IsNullOrWhiteSpace(extensionSummary))
+        {
+            lines.Add($"Extensions: {extensionSummary}");
+        }
+
+        await ExecuteScriptsAsync(
+            MapScriptFactory.BuildHoverInfoScripts(
+                [point.Longitude, point.Latitude],
+                "Punktinfo",
+                lines));
+    }
+
     private int? FindNearestPointIndex(double latitude, double longitude, double toleranceMeters)
     {
         var bestDistance = double.MaxValue;
@@ -262,6 +346,20 @@ public partial class MainWindow : Window
     {
         if (_isBusy || _currentDocument is null || _indexedPoints.Count == 0)
         {
+            return;
+        }
+
+        if (e.Key == Key.S && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            e.Handled = true;
+            await SaveCurrentTrackAsync();
+            return;
+        }
+
+        if (e.Key == Key.Delete)
+        {
+            e.Handled = true;
+            await TryDeleteSelectedRangeAsync();
             return;
         }
 
@@ -417,6 +515,7 @@ public partial class MainWindow : Window
     private void UpdateActionButtons()
     {
         OpenFileButton.IsEnabled = !_isBusy;
+        SaveFileButton.IsEnabled = !_isBusy && _currentDocument is not null && _hasUnsavedChanges;
         var hasRange = GetNormalizedSelection() is not null;
         DeleteRangeButton.IsEnabled = !_isBusy && hasRange;
         ExportRangeButton.IsEnabled = !_isBusy && hasRange;
@@ -453,6 +552,11 @@ public partial class MainWindow : Window
     }
 
     private async void DeleteRangeButton_Click(object sender, RoutedEventArgs e)
+    {
+        await TryDeleteSelectedRangeAsync();
+    }
+
+    private async Task TryDeleteSelectedRangeAsync()
     {
         if (_isBusy || _currentDocument is null || _selectionStartIndex is null || _selectionEndIndex is null)
         {
@@ -494,11 +598,12 @@ public partial class MainWindow : Window
             RebuildIndex();
             ClearSelectionState();
 
-            await RenderTrackAsync(_currentDocument);
+            await RenderTrackAsync(_currentDocument, includeFitBounds: false);
             await ExecuteScriptsAsync(MapScriptFactory.BuildClearSelectionScripts());
 
             UpdateTrackSummary();
-            SetStatus($"Deleted {result.DeletedPoints:N0} points.");
+            _hasUnsavedChanges = true;
+            SetStatus($"Deleted {result.DeletedPoints:N0} points. Use Save GPX to persist changes.");
         }
         catch (Exception ex)
         {
@@ -567,6 +672,90 @@ public partial class MainWindow : Window
         return $"{cleanName}_{selection.StartIndex}_{selection.EndIndexExclusive}.gpx";
     }
 
+    private async void SaveFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        await SaveCurrentTrackAsync();
+    }
+
+    private async Task SaveCurrentTrackAsync()
+    {
+        if (_currentDocument is null)
+        {
+            return;
+        }
+
+        if (!_hasUnsavedChanges)
+        {
+            SetStatus("No unsaved changes.");
+            return;
+        }
+
+        var saveDialog = new SaveFileDialog
+        {
+            Title = "Save GPX",
+            Filter = "GPX files (*.gpx)|*.gpx|All files (*.*)|*.*",
+            AddExtension = true,
+            DefaultExt = ".gpx",
+            OverwritePrompt = true,
+            FileName = GetDefaultSaveFileName()
+        };
+
+        var initialDirectory = GetDefaultSaveDirectory();
+        if (!string.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
+        {
+            saveDialog.InitialDirectory = initialDirectory;
+        }
+
+        if (saveDialog.ShowDialog(this) != true)
+        {
+            SetStatus("Save canceled. Changes are still unsaved.");
+            return;
+        }
+
+        _isBusy = true;
+        UpdateActionButtons();
+
+        try
+        {
+            await _gpxWriter.WriteAsync(_currentDocument, saveDialog.FileName, CancellationToken.None);
+            _currentFilePath = saveDialog.FileName;
+            _hasUnsavedChanges = false;
+            SetStatus($"Saved '{Path.GetFileName(saveDialog.FileName)}'.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Save failed: {ex.Message}");
+        }
+        finally
+        {
+            _isBusy = false;
+            UpdateActionButtons();
+        }
+    }
+
+    private string GetDefaultSaveFileName()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentFilePath))
+        {
+            return Path.GetFileName(_currentFilePath);
+        }
+
+        var baseName = string.IsNullOrWhiteSpace(_currentDocument?.Name) ? "track" : _currentDocument.Name;
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleanName = string.Concat(baseName.Select(ch => invalid.Contains(ch) ? '_' : ch));
+        return $"{cleanName}.gpx";
+    }
+
+    private string? GetDefaultSaveDirectory()
+    {
+        if (string.IsNullOrWhiteSpace(_currentFilePath))
+        {
+            return null;
+        }
+
+        return Path.GetDirectoryName(_currentFilePath);
+    }
+
     private static double GetDistanceMeters(double lat1, double lon1, double lat2, double lon2)
     {
         const double earthRadiusMeters = 6_371_000;
@@ -587,6 +776,67 @@ public partial class MainWindow : Window
     private static double DegreesToRadians(double degrees)
     {
         return degrees * Math.PI / 180.0;
+    }
+
+    private double? TryGetSpeedKmh(int currentGlobalIndex)
+    {
+        if (currentGlobalIndex <= 0 || currentGlobalIndex >= _indexedPoints.Count)
+        {
+            return null;
+        }
+
+        var current = _indexedPoints[currentGlobalIndex].Point;
+        var previous = _indexedPoints[currentGlobalIndex - 1].Point;
+
+        if (current.Time is null || previous.Time is null)
+        {
+            return null;
+        }
+
+        var deltaSeconds = (current.Time.Value - previous.Time.Value).TotalSeconds;
+        if (deltaSeconds <= 0)
+        {
+            return null;
+        }
+
+        var meters = GetDistanceMeters(previous.Latitude, previous.Longitude, current.Latitude, current.Longitude);
+        return meters / deltaSeconds * 3.6;
+    }
+
+    private static string? BuildExtensionsSummary(string? rawExtensionsXml)
+    {
+        if (string.IsNullOrWhiteSpace(rawExtensionsXml))
+        {
+            return null;
+        }
+
+        try
+        {
+            var extensionsElement = XElement.Parse(rawExtensionsXml, LoadOptions.None);
+            var names = extensionsElement
+                .Descendants()
+                .Select(node => node.Name.LocalName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(6)
+                .ToList();
+
+            if (names.Count == 0)
+            {
+                return "vorhanden";
+            }
+
+            return string.Join(", ", names);
+        }
+        catch (Exception)
+        {
+            var compact = rawExtensionsXml
+                .Replace(Environment.NewLine, " ", StringComparison.Ordinal)
+                .Replace("\n", " ", StringComparison.Ordinal)
+                .Trim();
+
+            return compact.Length <= 120 ? compact : compact[..120] + "...";
+        }
     }
 
     private void SetStatus(string message)

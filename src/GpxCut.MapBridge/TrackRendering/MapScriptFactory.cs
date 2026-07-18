@@ -5,7 +5,7 @@ namespace GpxCut.MapBridge.TrackRendering;
 
 public static class MapScriptFactory
 {
-    public static IEnumerable<string> BuildRenderScripts(TrackDocument document, int chunkSize = 10_000)
+    public static IEnumerable<string> BuildRenderScripts(TrackDocument document, bool includeFitBounds = true, int chunkSize = 10_000)
     {
         yield return "window.gpxcutMap.clearTrack();";
         yield return "window.gpxcutMap.clearEndpoints();";
@@ -27,7 +27,7 @@ public static class MapScriptFactory
             yield return $"window.gpxcutMap.setEndpoints({endpointsJson});";
         }
 
-        if (document.Metadata.HasBounds)
+        if (includeFitBounds && document.Metadata.HasBounds)
         {
             var boundsJson = JsonSerializer.Serialize(new
             {
@@ -43,6 +43,23 @@ public static class MapScriptFactory
     public static IEnumerable<string> BuildClearSelectionScripts()
     {
         yield return "window.gpxcutMap.clearSelection();";
+    }
+
+    public static IEnumerable<string> BuildHoverInfoScripts(double[] coordinate, string title, IReadOnlyList<string> lines)
+    {
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            coordinate,
+            title,
+            lines
+        });
+
+        yield return $"window.gpxcutMap.setHoverInfo({payloadJson});";
+    }
+
+    public static IEnumerable<string> BuildClearHoverInfoScripts()
+    {
+        yield return "window.gpxcutMap.clearHoverInfo();";
     }
 
     public static IEnumerable<string> BuildSelectionScripts(
