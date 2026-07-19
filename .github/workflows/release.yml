@@ -43,11 +43,14 @@ jobs:
           scripts/release/create-installer-layout.ps1 -Runtime win-x64
 
       - name: Install WiX Toolset
-        run: dotnet tool install --global wix
+        shell: pwsh
+        run: |
+          dotnet tool install --tool-path ./.tools wix
 
       - name: Build MSI
         shell: pwsh
         run: |
+          $env:PATH = "$PWD/.tools;$env:PATH"
           installer/wix/build-msi.ps1 -Version "${{ steps.version.outputs.VERSION }}" -Runtime win-x64
 
       - name: Create GitHub Release
