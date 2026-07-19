@@ -16,15 +16,49 @@
       </Directory>
     </StandardDirectory>
 
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="GpxCut" />
+    </StandardDirectory>
+
     <Feature Id="MainFeature" Title="GpxCut" Level="1">
       <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="AppExecutableComponent" />
+      <ComponentRef Id="GpxFileAssociationComponent" />
     </Feature>
 
   </Package>
 
   <Fragment>
+    <Component Id="AppExecutableComponent" Directory="INSTALLFOLDER">
+      <File Id="AppExeFile" Source="$(var.PublishDir)\GpxCut.App.exe" KeyPath="yes">
+        <Shortcut
+          Id="ApplicationStartMenuShortcut"
+          Directory="ProgramMenuDir"
+          Name="GpxCut"
+          Description="GpxCut GPX Track Editor"
+          WorkingDirectory="INSTALLFOLDER"
+          Advertise="no" />
+      </File>
+      <RemoveFolder Id="ProgramMenuDirCleanup" Directory="ProgramMenuDir" On="uninstall" />
+    </Component>
+
+    <Component Id="GpxFileAssociationComponent" Directory="INSTALLFOLDER">
+      <RegistryKey Root="HKLM" Key="Software\Classes\GpxCut.gpx">
+        <RegistryValue Type="string" Value="GpxCut GPX Track" KeyPath="yes" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\GpxCut.gpx\shell\open\command">
+        <RegistryValue
+          Type="string"
+          Value="&quot;[INSTALLFOLDER]GpxCut.App.exe&quot; &quot;%1&quot;" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\.gpx\OpenWithProgids">
+        <RegistryValue Name="GpxCut.gpx" Type="string" Value="" />
+      </RegistryKey>
+    </Component>
+
     <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
       <Files Include="$(var.PublishDir)\**">
+        <Exclude Files="$(var.PublishDir)\GpxCut.App.exe" />
         <Exclude Files="$(var.PublishDir)\**\*.pdb" />
         <Exclude Files="$(var.PublishDir)\**\*.wixpdb" />
       </Files>

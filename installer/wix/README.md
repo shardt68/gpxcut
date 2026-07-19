@@ -94,6 +94,8 @@ Rule:
 - Without certificate: use only Variant A
 - With certificate: use Variant B or Strict Release
 - Installer files are harvested recursively from `artifacts/installer-layout/<runtime>` (excluding `*.pdb` and `*.wixpdb`)
+- Installer creates a Start menu entry (`GpxCut`) for all users
+- Installer registers `.gpx` as an Open With option for GpxCut without forcing GpxCut as the default app
 - When calling bool parameters from Bash, prefer PowerShell literals inside a `-Command`
 
 ```powershell
