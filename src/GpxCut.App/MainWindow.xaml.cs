@@ -62,21 +62,62 @@ public partial class MainWindow : Window
 
     private async Task InitializeMapAsync()
     {
+        var mapFilePath = Path.Combine(AppContext.BaseDirectory, "MapAssets", "map.html");
+        if (!File.Exists(mapFilePath))
+        {
+            SetStatus("Map initialization failed: MapAssets/map.html not found.");
+            LogError("MAP_INIT_ASSET", null, mapFilePath);
+            return;
+        }
+
         try
         {
             SetStatus("Initializing map...");
 
-            await MapWebView.EnsureCoreWebView2Async();
-            MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2OnWebMessageReceived;
+            var userDataFolders = BuildWebViewUserDataFolders();
+            Exception? lastInitializeException = null;
 
-            var mapFilePath = Path.Combine(AppContext.BaseDirectory, "MapAssets", "map.html");
-            MapWebView.Source = new Uri(mapFilePath);
+            foreach (var folder in userDataFolders)
+            {
+                try
+                {
+                    Directory.CreateDirectory(folder);
+                    var webViewEnvironment = await CoreWebView2Environment.CreateAsync(userDataFolder: folder);
+                    await MapWebView.EnsureCoreWebView2Async(webViewEnvironment);
+                    MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2OnWebMessageReceived;
+
+                    MapWebView.Source = new Uri(mapFilePath, UriKind.Absolute);
+                    SetStatus($"Initializing map... (WebView data: {folder})");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastInitializeException = ex;
+                    LogError("MAP_INIT_ATTEMPT", ex, folder);
+                }
+            }
+
+            throw lastInitializeException ?? new InvalidOperationException("WebView2 initialization failed without a detailed exception.");
         }
         catch (Exception ex)
         {
             LogError("MAP_INIT", ex, "InitializeMapAsync");
-            SetStatus($"Map initialization failed: {ex.Message}");
+            var hResultHex = $"0x{ex.HResult:X8}";
+            SetStatus($"Map initialization failed ({hResultHex}): {ex.Message}");
         }
+    }
+
+    private static List<string> BuildWebViewUserDataFolders()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var tempPath = Path.GetTempPath();
+
+        return
+        [
+            Path.Combine(localAppData, "GpxCut", "WebView2"),
+            Path.Combine(localAppData, "GpxCut", "WebView2Fallback"),
+            Path.Combine(tempPath, "GpxCut", "WebView2")
+        ];
     }
 
     private void CoreWebView2OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

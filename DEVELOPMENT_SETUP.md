@@ -29,6 +29,9 @@ It is optimized for external contributors and follows a winget-first approach.
 ## Optional/Conditional
 - `skills-ref` validator (for skill validation)
 - Node.js (only if additional frontend/asset tooling is needed in the MapBridge workflow)
+- **WiX Toolset CLI** (only if you need to build the Windows MSI installer locally)
+  - See [installer/wix/README.md](installer/wix/README.md) for MSI build workflow
+  - See [installer/wix/WIX_VERSIONS.md](installer/wix/WIX_VERSIONS.md) for version details
 
 ## 3. Installation (Winget-First)
 

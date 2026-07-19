@@ -9,15 +9,33 @@ This document describes the exact MSI build process and what to do in each case.
 
 ## Prerequisites
 
-- WiX Toolset CLI (`wix`) in `PATH`
+- WiX Toolset CLI (`wix`) in `PATH` (v4 or later)
+  - Install via `winget install wixtoolset`
+  - **First-time setup**: After installation, run `wix eula accept` (version-specific, see below)
 - PowerShell 7+
 - .NET SDK 8
 
-One-time setup for WiX v7:
+### WiX Version and Setup
+
+GpxCut uses **WiX Toolset v4+ (modern CLI)** with v4 XML schema.
+
+If you have WiX v7 installed, run this one-time setup:
 
 ```powershell
 wix eula accept wix7
 ```
+
+If you have a different version (e.g., v5, v6), adjust accordingly:
+```powershell
+wix eula accept wix5   # for WiX v5
+wix eula accept wix6   # for WiX v6
+```
+
+To check your WiX version: `wix --version`
+
+**For detailed version information**, see [WIX_VERSIONS.md](WIX_VERSIONS.md).
+
+If you are seeing local "WiX 6 vs 7" version conflicts, see the dedicated explanation in [WIX_VERSIONS.md](WIX_VERSIONS.md#why-you-saw-6-vs-7).
 
 ## Workflow (Always the Same)
 
