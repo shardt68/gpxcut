@@ -74,8 +74,29 @@ jobs:
       - name: Build MSI
         shell: pwsh
         run: |
-          $env:PATH = "$PWD/.tools;$env:PATH"
-          ./installer/wix/build-msi.ps1 -Version "${{ steps.version.outputs.VERSION }}" -Runtime win-x64
+          $layoutDir = Join-Path $PWD "artifacts/installer-layout/win-x64"
+          if (!(Test-Path $layoutDir)) {
+            throw "Installer layout not found: $layoutDir"
+          }
+
+          $outputDir = Join-Path $PWD "artifacts/installer/win-x64"
+          if (!(Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Path $outputDir | Out-Null
+          }
+
+          $wixExe = Join-Path $PWD ".tools/wix.exe"
+          if (!(Test-Path $wixExe)) {
+            throw "WiX executable not found: $wixExe"
+          }
+
+          & $wixExe --version
+
+          $msiPath = Join-Path $outputDir "GpxCut-${{ steps.version.outputs.VERSION }}-win-x64.msi"
+          & $wixExe build "installer/wix/GpxCut.Setup.wxs" `
+            -arch x64 `
+            -d PublishDir=$layoutDir `
+            -d Version=${{ steps.version.outputs.VERSION }} `
+            -out $msiPath
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
