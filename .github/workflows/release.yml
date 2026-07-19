@@ -70,6 +70,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet tool install --tool-path ./.tools wix
+          Get-ChildItem ./.tools | Format-Table -AutoSize
 
       - name: Build MSI
         shell: pwsh
@@ -84,11 +85,18 @@ jobs:
             New-Item -ItemType Directory -Path $outputDir | Out-Null
           }
 
-          $wixExe = Join-Path $PWD ".tools/wix.exe"
-          if (!(Test-Path $wixExe)) {
-            throw "WiX executable not found: $wixExe"
+          $wixCandidates = @(
+            (Join-Path $PWD ".tools/wix.exe"),
+            (Join-Path $PWD ".tools/wix")
+          )
+          $wixExe = $wixCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $wixExe) {
+            Write-Host "Contents of .tools:"
+            Get-ChildItem (Join-Path $PWD ".tools") | Format-Table -AutoSize
+            throw "WiX executable not found in .tools (checked wix.exe and wix)."
           }
 
+          Write-Host "Using WiX CLI: $wixExe"
           & $wixExe --version
 
           $msiPath = Join-Path $outputDir "GpxCut-${{ steps.version.outputs.VERSION }}-win-x64.msi"
@@ -97,6 +105,12 @@ jobs:
             -d PublishDir=$layoutDir `
             -d Version=${{ steps.version.outputs.VERSION }} `
             -out $msiPath
+
+          if (!(Test-Path $msiPath)) {
+            throw "MSI build completed without output file: $msiPath"
+          }
+
+          Write-Host "MSI created: $msiPath"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
