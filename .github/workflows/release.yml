@@ -35,12 +35,36 @@ jobs:
       - name: Publish app
         shell: pwsh
         run: |
-          ./scripts/release/publish-gpxcut.ps1 -Configuration Release -Runtime win-x64
+          $outputDir = Join-Path $PWD "artifacts/publish/win-x64"
+          if (Test-Path $outputDir) {
+            Remove-Item $outputDir -Recurse -Force
+          }
+
+          dotnet publish "src/GpxCut.App/GpxCut.App.csproj" `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:IncludeAllContentForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o $outputDir
 
       - name: Create installer layout
         shell: pwsh
         run: |
-          ./scripts/release/create-installer-layout.ps1 -Runtime win-x64
+          $publishDir = Join-Path $PWD "artifacts/publish/win-x64"
+          if (!(Test-Path $publishDir)) {
+            throw "Publish directory not found: $publishDir"
+          }
+
+          $layoutDir = Join-Path $PWD "artifacts/installer-layout/win-x64"
+          if (Test-Path $layoutDir) {
+            Remove-Item $layoutDir -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Path $layoutDir | Out-Null
+          Copy-Item -Path (Join-Path $publishDir "*") -Destination $layoutDir -Recurse -Force
 
       - name: Install WiX Toolset
         shell: pwsh
