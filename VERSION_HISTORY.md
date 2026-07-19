@@ -1,5 +1,17 @@
 # Version History
 
+## 0.1.14 - 2026-07-19
+
+### Type
+- Bug fix
+
+### Fixed
+- "Open with" file association now correctly loads the GPX file on startup. Previously, the file was silently discarded because `OpenTrackFileAsync` was called before the map was fully initialized and the `map-ready` signal was received.
+
+### Changed
+- Deferred file loading to the `map-ready` event handler to ensure map initialization completes before loading the GPX file.
+- Updated GitHub Actions workflow to use softprops/action-gh-release@v3.
+
 ## 0.1.1 - 2026-07-19
 
 ### Type

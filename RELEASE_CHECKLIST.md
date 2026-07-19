@@ -5,6 +5,10 @@ This checklist describes what must be completed for a release-ready build.
 ## 1. Preparation
 
 - Define version number (example: 0.1.0)
+- **Update [VERSION_HISTORY.md](VERSION_HISTORY.md)** with new section for this version at the top, including:
+  - Release date
+  - Type (Feature/Bug fix/Maintenance)
+  - Detailed description of changes
 - Prepare changelog/release notes
 - Ensure there are no critical unresolved local changes
 

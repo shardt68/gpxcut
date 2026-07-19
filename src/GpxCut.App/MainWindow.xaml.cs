@@ -54,11 +54,6 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await InitializeMapAsync();
-
-        if (!string.IsNullOrWhiteSpace(_startupFilePath))
-        {
-            await OpenTrackFileAsync(_startupFilePath);
-        }
     }
 
     private async Task InitializeMapAsync()
@@ -180,7 +175,14 @@ public partial class MainWindow : Window
                 if (string.Equals(root.GetString(), "map-ready", StringComparison.OrdinalIgnoreCase))
                 {
                     _isMapReady = true;
-                    SetStatus("Map ready. Open a GPX file.");
+                    if (!string.IsNullOrWhiteSpace(_startupFilePath))
+                    {
+                        await OpenTrackFileAsync(_startupFilePath);
+                    }
+                    else
+                    {
+                        SetStatus("Map ready. Open a GPX file.");
+                    }
                 }
 
                 return;
