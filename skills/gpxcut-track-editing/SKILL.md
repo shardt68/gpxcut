@@ -36,6 +36,16 @@ Use this skill when the task mentions one or more of:
 6. After changes, run build and tests relevant to touched areas.
 7. Keep all project documentation updates in English.
 
+## Release Requests (Mandatory Behavior)
+
+If the user explicitly requests a downloadable release, follow this sequence:
+
+1. Implement and commit all required changes.
+2. Merge into the release branch (`master` in this repository).
+3. Create and push a `v*` tag on the merged commit.
+4. Rely on `.github/workflows/release.yml` to build the MSI and publish the GitHub Release asset.
+5. Verify the release page contains `GpxCut-<version>-win-x64.msi`.
+
 ## Quality Gates
 
 - Correctness: operations are deterministic and testable.

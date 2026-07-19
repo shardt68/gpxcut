@@ -84,3 +84,18 @@ Get-FileHash ./artifacts/installer/win-x64/GpxCut-0.1.0-win-x64.msi -Algorithm S
 - Internal approval documented
 - Artifacts and notes published
 - Repository tag created (if used)
+
+## 9. GitHub Release Automation (Required Flow)
+
+When a release is requested for download via GitHub, use this exact flow:
+
+1. Commit release-related changes on the working branch.
+2. Merge the branch into `master` (or `main`, if used).
+3. Create and push a semantic tag on the merged commit (example: `v0.1.1`).
+4. The workflow in `.github/workflows/release.yml` runs automatically on tag push (`v*`).
+5. The workflow builds and uploads `GpxCut-<version>-win-x64.msi` as a GitHub Release asset.
+
+Verification:
+
+- Check GitHub Actions for a successful `Release` workflow run.
+- Confirm the MSI is available on the corresponding GitHub Release page.
