@@ -35,12 +35,12 @@ jobs:
       - name: Publish app
         shell: pwsh
         run: |
-          scripts/release/publish-gpxcut.ps1 -Configuration Release -Runtime win-x64
+          ./scripts/release/publish-gpxcut.ps1 -Configuration Release -Runtime win-x64
 
       - name: Create installer layout
         shell: pwsh
         run: |
-          scripts/release/create-installer-layout.ps1 -Runtime win-x64
+          ./scripts/release/create-installer-layout.ps1 -Runtime win-x64
 
       - name: Install WiX Toolset
         shell: pwsh
@@ -51,7 +51,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "$PWD/.tools;$env:PATH"
-          installer/wix/build-msi.ps1 -Version "${{ steps.version.outputs.VERSION }}" -Runtime win-x64
+          ./installer/wix/build-msi.ps1 -Version "${{ steps.version.outputs.VERSION }}" -Runtime win-x64
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
