@@ -1,85 +1,85 @@
 # GpxCut Windows Installer
 
-Diese Doku beschreibt das konkrete Vorgehen fuer MSI-Builds und was jeweils zu tun ist.
+This document describes the exact MSI build process and what to do in each case.
 
-## Ziel
+## Goal
 
-- Interne Test-MSI schnell bauen (unsigniert erlaubt)
-- Release-MSI nur signiert bauen (optional durch Strict-Mode erzwungen)
+- Quickly build internal test MSI packages (unsigned allowed)
+- Build release MSI packages only when signed (optionally enforced by strict mode)
 
-## Voraussetzungen
+## Prerequisites
 
 - WiX Toolset CLI (`wix`) in `PATH`
 - PowerShell 7+
 - .NET SDK 8
 
-Einmalig bei WiX v7:
+One-time setup for WiX v7:
 
 ```powershell
 wix eula accept wix7
 ```
 
-## Ablauf (immer gleich)
+## Workflow (Always the Same)
 
-1. Anwendung publishen
+1. Publish application
 
 ```powershell
 pwsh ./scripts/release/publish-gpxcut.ps1
 ```
 
-2. Installer-Layout erzeugen
+2. Generate installer layout
 
 ```powershell
 pwsh ./scripts/release/create-installer-layout.ps1
 ```
 
-3. MSI bauen (Variante je nach Ziel, siehe unten)
+3. Build MSI (variant depends on target, see below)
 
-MSI-Ausgabe liegt unter `artifacts/installer/win-x64`.
+MSI output is under `artifacts/installer/win-x64`.
 
-## Variante A: Interner Build (ohne Zertifikat)
+## Variant A: Internal Build (Without Certificate)
 
-Nutzen fuer lokale Tests, QA und interne Verteilung.
+Use for local tests, QA, and internal distribution.
 
 ```powershell
 pwsh ./installer/wix/build-msi.ps1 -Version 0.1.0
 ```
 
-Verhalten:
-- Standard ist `-SignArtifacts $false`
-- Build laeuft durch und gibt eine Warnung fuer unsignierte Artefakte aus
+Behavior:
+- Default is `-SignArtifacts $false`
+- Build completes and shows a warning for unsigned artifacts
 
-## Variante B: Release Build (mit Zertifikat)
+## Variant B: Release Build (With Certificate)
 
-Nutzen fuer externe Distribution.
+Use for external distribution.
 
 ```powershell
 pwsh ./installer/wix/build-msi.ps1 -Version 0.1.0 -SignArtifacts $true -PfxPath "C:\certs\gpxcut.pfx" -PfxPassword "<password>"
 ```
 
-Verhalten:
-- `GpxCut.App.exe` im Layout und das erzeugte MSI werden signiert
+Behavior:
+- `GpxCut.App.exe` in the layout and the generated MSI are signed
 
 ## Strict Release (Guardrail)
 
-Wenn Releases niemals unsigniert gebaut werden duerfen:
+Use this if releases must never be built unsigned:
 
 ```powershell
 pwsh ./installer/wix/build-msi.ps1 -Version 0.1.0 -StrictRelease $true -SignArtifacts $true -PfxPath "C:\certs\gpxcut.pfx" -PfxPassword "<password>"
 ```
 
-Regel:
-- `-StrictRelease $true` plus `-SignArtifacts $false` fuehrt absichtlich zu einem Fehler
+Rule:
+- `-StrictRelease $true` plus `-SignArtifacts $false` intentionally fails
 
-## Wichtige Hinweise
+## Important Notes
 
-- Ohne Zertifikat: nur Variante A verwenden
-- Mit Zertifikat: Variante B oder Strict Release verwenden
-- Die Installer-Dateien werden rekursiv aus `artifacts/installer-layout/<runtime>` geharvestet (ohne `*.pdb` und `*.wixpdb`)
-- Wenn bool-Parameter aus Bash aufgerufen werden, besser PowerShell-Literale in einem `-Command` verwenden
+- Without certificate: use only Variant A
+- With certificate: use Variant B or Strict Release
+- Installer files are harvested recursively from `artifacts/installer-layout/<runtime>` (excluding `*.pdb` and `*.wixpdb`)
+- When calling bool parameters from Bash, prefer PowerShell literals inside a `-Command`
 
 ```powershell
 pwsh -NoProfile -Command '& ./installer/wix/build-msi.ps1 -Version 0.1.0 -StrictRelease $true'
 ```
 
-Fuer die komplette Abnahme bis zur Auslieferung siehe [RELEASE_CHECKLIST.md](../../RELEASE_CHECKLIST.md).
+For complete acceptance through delivery, see [RELEASE_CHECKLIST.md](../../RELEASE_CHECKLIST.md).

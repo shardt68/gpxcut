@@ -34,6 +34,7 @@ Use this skill when the task mentions one or more of:
 4. Preserve unmodified GPX metadata and unknown extensions.
 5. For large files, prefer streaming/chunk-aware approaches.
 6. After changes, run build and tests relevant to touched areas.
+7. Keep all project documentation updates in English.
 
 ## Quality Gates
 
@@ -41,6 +42,7 @@ Use this skill when the task mentions one or more of:
 - Stability: errors are surfaced with actionable messages.
 - Performance: avoid full redraws and chatty C#-JS bridging.
 - Integrity: exported GPX should remain valid in third-party tools.
+- Documentation: all added or edited documentation is written in English.
 
 ## References
 

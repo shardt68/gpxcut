@@ -21,3 +21,9 @@ Use the reference validator:
 ```bash
 skills-ref validate ./skills/<skill-name>
 ```
+
+## Documentation Language Policy
+
+- The documentation language for all project docs and skill docs is English.
+- New or updated Markdown documentation under `skills/` must be written in English.
+- If existing documentation is in another language, translate it to English when touching it.

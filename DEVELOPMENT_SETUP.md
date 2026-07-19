@@ -1,38 +1,38 @@
 # Development Environment Setup (Windows)
 
-Diese Anleitung beschreibt das Aufsetzen der Entwicklungsumgebung fuer `gpxcut` auf Windows.
-Sie ist fuer externe Contributor optimiert und nutzt einen winget-first Ansatz.
+This guide describes how to set up the `gpxcut` development environment on Windows.
+It is optimized for external contributors and follows a winget-first approach.
 
-## 1. Ziel und Scope
+## 1. Goal and Scope
 
-### Zielgruppe
-- Externe Contributor (primaer)
-- Internes Team (sekundaer)
+### Target Audience
+- External contributors (primary)
+- Internal team (secondary)
 
 ### In Scope
-- Lokale Entwicklungsumgebung fuer Build, Test und Skill-Validierung
-- Zugriff auf Projektressourcen und Referenzdokumente
+- Local development environment for build, test, and skill validation
+- Access to project resources and reference documents
 
 ### Out of Scope
-- Endnutzer-Installer und Release-Distribution
-- Nicht-Windows Plattformen (MVP ist Windows-only)
+- End-user installer and release distribution
+- Non-Windows platforms (MVP is Windows-only)
 
-## 2. Pflicht- und Optional-Tools
+## 2. Required and Optional Tools
 
-## Pflichttools
+## Required Tools
 - Git
 - .NET SDK 8
 - Visual Studio Code
 - PowerShell 7+
 - Microsoft Edge WebView2 Runtime
 
-## Optional/Abhaengig
-- `skills-ref` Validator (fuer Skill-Validierung)
-- Node.js (nur falls zusaetzliches Frontend/Asset-Tooling im MapBridge-Workflow benoetigt wird)
+## Optional/Conditional
+- `skills-ref` validator (for skill validation)
+- Node.js (only if additional frontend/asset tooling is needed in the MapBridge workflow)
 
-## 3. Installation (winget-first)
+## 3. Installation (Winget-First)
 
-Fuehre die folgenden Kommandos in PowerShell aus:
+Run the following commands in PowerShell:
 
 ```powershell
 winget install --id Git.Git -e
@@ -42,9 +42,9 @@ winget install --id Microsoft.PowerShell -e
 winget install --id Microsoft.EdgeWebView2Runtime -e
 ```
 
-Wenn `winget` nicht verfuegbar ist, installiere die Tools manuell ueber die jeweiligen Herstellerseiten.
+If `winget` is not available, install the tools manually from the corresponding vendor websites.
 
-## 4. Versionen und Installation pruefen
+## 4. Verify Versions and Installation
 
 ```powershell
 git --version
@@ -61,55 +61,55 @@ node --version
 npm --version
 ```
 
-## 5. Repository klonen und lokal starten
+## 5. Clone Repository and Start Locally
 
 ```powershell
 git clone <REPO_URL>
 cd gpxcut
 ```
 
-## 6. Projektvalidierung
+## 6. Project Validation
 
-### Standardweg (vorhandenes Skript)
+### Standard Path (Existing Script)
 
 ```powershell
 pwsh ./skills/gpxcut-track-editing/scripts/validate-solution.ps1
 ```
 
-Das Skript fuehrt aktuell aus:
+The script currently runs:
 - `dotnet build -c Debug`
 - `dotnet test -c Debug --no-build`
 
-### Manueller Fallback
+### Manual Fallback
 
 ```powershell
 dotnet build -c Debug
 dotnet test -c Debug --no-build
 ```
 
-## 6a. App lokal starten
+## 6a. Start App Locally
 
-Manuell:
+Manual:
 
 ```powershell
 dotnet run --project src/GpxCut.App/GpxCut.App.csproj -c Debug
 ```
 
-Per Skript:
+By script:
 
 ```powershell
 pwsh ./scripts/dev/run-app.ps1
 ```
 
-## 6b. Dev-Helferskripte
+## 6b. Developer Helper Scripts
 
 - Build: `pwsh ./scripts/dev/build-debug.ps1`
 - Tests: `pwsh ./scripts/dev/test-debug.ps1`
-- App starten: `pwsh ./scripts/dev/run-app.ps1`
-- Alles in einem: `pwsh ./scripts/dev/start-dev.ps1`
-- Build+Tests kombiniert: `pwsh ./skills/gpxcut-track-editing/scripts/validate-solution.ps1`
+- Start app: `pwsh ./scripts/dev/run-app.ps1`
+- All in one: `pwsh ./scripts/dev/start-dev.ps1`
+- Combined build+tests: `pwsh ./skills/gpxcut-track-editing/scripts/validate-solution.ps1`
 
-Beispiele fuer `start-dev.ps1`:
+Examples for `start-dev.ps1`:
 
 ```powershell
 pwsh ./scripts/dev/start-dev.ps1
@@ -117,57 +117,57 @@ pwsh ./scripts/dev/start-dev.ps1 -SkipTests
 pwsh ./scripts/dev/start-dev.ps1 -SkipBuild
 ```
 
-## 7. Was gilt als "Setup erfolgreich"
+## 7. What Counts as "Setup Successful"
 
-Die Umgebung gilt als korrekt eingerichtet, wenn:
-- Alle Pflichttools installiert sind
-- `dotnet --list-sdks` ein 8.x SDK zeigt
-- Build und Tests ohne Fehler durchlaufen
-- Skill-Struktur vorhanden ist und (falls genutzt) `skills-ref validate` erfolgreich laeuft
+The environment is considered correctly set up when:
+- All required tools are installed
+- `dotnet --list-sdks` shows an 8.x SDK
+- Build and tests run without errors
+- Skill structure is present and (if used) `skills-ref validate` runs successfully
 
-## 8. Projektressourcen und Lesereihenfolge
+## 8. Project Resources and Reading Order
 
-Empfohlener Einstieg fuer neue Contributor:
+Recommended onboarding order for new contributors:
 
-1. [README.md](README.md) - Projektueberblick und Ziele
-2. [AGENTS.md](AGENTS.md) - Architekturprinzipien, Scope, Arbeitsmodus
-3. [skills/README.md](skills/README.md) - Skill-Struktur und Validator-Hinweise
-4. [skills/gpxcut-track-editing/SKILL.md](skills/gpxcut-track-editing/SKILL.md) - Workflow und Quality Gates
-5. [skills/gpxcut-track-editing/references/REFERENCE.md](skills/gpxcut-track-editing/references/REFERENCE.md) - Architekturgrenzen und Prioritaeten
-6. Feature-Spezifikationen unter [skills/gpxcut-track-editing/references/features](skills/gpxcut-track-editing/references/features)
+1. [README.md](README.md) - project overview and goals
+2. [AGENTS.md](AGENTS.md) - architecture principles, scope, working mode
+3. [skills/README.md](skills/README.md) - skill structure and validator guidance
+4. [skills/gpxcut-track-editing/SKILL.md](skills/gpxcut-track-editing/SKILL.md) - workflow and quality gates
+5. [skills/gpxcut-track-editing/references/REFERENCE.md](skills/gpxcut-track-editing/references/REFERENCE.md) - architectural boundaries and priorities
+6. Feature specifications under [skills/gpxcut-track-editing/references/features](skills/gpxcut-track-editing/references/features)
 
-## 9. Troubleshooting (haeufige Probleme)
+## 9. Troubleshooting (Common Issues)
 
-### Falsches oder fehlendes .NET SDK
-- Symptom: Build faellt mit SDK-Fehlern aus
+### Wrong or Missing .NET SDK
+- Symptom: build fails with SDK errors
 - Check: `dotnet --list-sdks`
-- Fix: .NET SDK 8 installieren und neues Terminal starten
+- Fix: install .NET SDK 8 and start a new terminal
 
-### WebView2 Runtime fehlt
-- Symptom: Kartenansicht startet nicht korrekt
-- Fix: Microsoft Edge WebView2 Runtime installieren
+### Missing WebView2 Runtime
+- Symptom: map view does not start correctly
+- Fix: install Microsoft Edge WebView2 Runtime
 
-### PowerShell blockiert Skriptausfuehrung
-- Symptom: `validate-solution.ps1` darf nicht ausgefuehrt werden
+### PowerShell Blocks Script Execution
+- Symptom: `validate-solution.ps1` is not allowed to run
 - Check/Fix (CurrentUser):
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-### Proxy/Firewall blockiert Paketquellen oder OSM-Tiles
-- Symptom: Installationen oder Kartenkacheln schlagen fehl
-- Fix: Proxy fuer `winget`, Git und Systemnetzwerk korrekt konfigurieren
+### Proxy/Firewall Blocks Package Sources or OSM Tiles
+- Symptom: installs or map tiles fail
+- Fix: configure proxy settings correctly for `winget`, Git, and system networking
 
-## 10. Reproduzierbarkeit (optional, Nice-to-have)
+## 10. Reproducibility (Optional, Nice to Have)
 
-Empfohlene naechste Schritte:
-- Optionales Bootstrap-Skript fuer Tool-Checks und Preflight erstellen
-- Optionales Diagnose-Skript fuer lokale Konsistenzchecks vor Commits
-- Dokumentation bei jeder Toolchain-Aenderung mitpflegen
+Recommended next steps:
+- Create an optional bootstrap script for tool checks and preflight
+- Create an optional diagnostics script for local consistency checks before commits
+- Keep documentation updated with every toolchain change
 
-## 11. Pflegeprozess fuer diese Doku
+## 11. Maintenance Process for This Doc
 
-- Bei Upgrade von .NET/Toolchain muss diese Datei aktualisiert werden
-- Bei neuen Pflichttools muessen Installation und Verifikation ergaenzt werden
-- Nach Aenderungen an Setup-Schritten immer Build+Test lokal gegenpruefen
+- Update this file whenever .NET or the toolchain is upgraded
+- Extend installation and verification sections when new required tools are added
+- Always run local build+test checks after changing setup steps
