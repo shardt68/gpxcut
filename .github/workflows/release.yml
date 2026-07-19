@@ -69,7 +69,7 @@ jobs:
       - name: Install WiX Toolset
         shell: pwsh
         run: |
-          dotnet tool install --tool-path ./.tools wix
+          dotnet tool install --tool-path ./.tools wix --version 6.*
           Get-ChildItem ./.tools | Format-Table -AutoSize
 
       - name: Build MSI
@@ -105,6 +105,10 @@ jobs:
             -d PublishDir=$layoutDir `
             -d Version=${{ steps.version.outputs.VERSION }} `
             -out $msiPath
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "WiX build failed with exit code $LASTEXITCODE"
+          }
 
           if (!(Test-Path $msiPath)) {
             throw "MSI build completed without output file: $msiPath"
