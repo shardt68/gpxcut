@@ -1,273 +1,273 @@
 # AGENTS.md
 
-## Projektkontext
+## Project Context
 
-Dieses Repository baut einen Windows-Desktop-Editor fuer GPX-Tracks mit OpenStreetMap-Visualisierung.
+This repository builds a Windows desktop editor for GPX tracks with OpenStreetMap visualization.
 
-### Produktziel
-- Sehr grosse GPX-Tracks (typisch 500.000 bis 1.000.000 Punkte) laden und visualisieren.
-- Komfortables Bearbeiten mit Kernoperationen:
-  - Track an Position zerschneiden
-  - Bereich markieren und loeschen
-  - Teiltrack als neue GPX speichern
-- Strikte Erhaltung von GPX-Metadaten (Zeit, Hoehe, Extensions), soweit Punkte unveraendert bleiben.
+### Product Goal
+- Load and visualize very large GPX tracks (typically 500,000 to 1,000,000 points).
+- Enable convenient editing with core operations:
+  - Split track at a position
+  - Mark and delete a range
+  - Save a partial track as a new GPX
+- Strictly preserve GPX metadata (time, elevation, extensions) where points remain unchanged.
 
-### Zielplattform
-- Nur Windows (MVP und v1)
+### Target Platform
+- Windows only (MVP and v1)
 
-### Kartenstrategie
-- OSM online anzeigen
-- Offline-Resilienz via lokalem Tile-Cache (MVP: einfacher HTTP-Cache mit Limit)
+### Map Strategy
+- Display OSM online
+- Offline resilience through a local tile cache (MVP: simple HTTP cache with limits)
 
-## Technologiestack (festgelegt)
+## Technology Stack (Fixed)
 
-- Sprache/Runtime: C# auf .NET 8
-- Desktop-UI: WPF (MVVM)
-- Karte: WebView2 + MapLibre GL JS + OSM-Tiles
-- GPX IO: XML-basiertes Streaming Parsing/Writing in C#
+- Language/Runtime: C# on .NET 8
+- Desktop UI: WPF (MVVM)
+- Map: WebView2 + MapLibre GL JS + OSM tiles
+- GPX IO: XML-based streaming parsing/writing in C#
 - Tests:
-  - Unit-Tests fuer Editing und GPX-Roundtrip
-  - Performance-Tests mit grossen Datensaetzen
+  - Unit tests for editing and GPX roundtrip
+  - Performance tests with large datasets
 
-## Leitplanken und Praemissen
+## Guardrails and Assumptions
 
-### Performanceziele
-- Referenzhardware: Office-Laptop (i5/Ryzen5, 16 GB RAM, integrierte GPU)
-- Ladezeit 1.000.000 Punkte: bis 10 Sekunden akzeptabel
-- Interaktion: mindestens 30 FPS stabil bei Pan/Zoom (MVP-Ziel)
+### Performance Goals
+- Reference hardware: office laptop (i5/Ryzen5, 16 GB RAM, integrated GPU)
+- Load time for 1,000,000 points: up to 10 seconds is acceptable
+- Interaction: at least stable 30 FPS during pan/zoom (MVP target)
 
-### MVP-Scope (verbindlich)
-- Datei oeffnen (GPX)
-- Track auf Karte anzeigen
-- Split-Operation
-- Bereich loeschen
-- Teiltrack exportieren
-- Solides Fehlerhandling bei defekten/ungueltigen GPX
+### MVP Scope (Binding)
+- Open file (GPX)
+- Display track on map
+- Split operation
+- Delete range
+- Export partial track
+- Solid error handling for broken/invalid GPX
 
-### Nicht im MVP (bewusst verschoben nach v1.1)
-- Undo/Redo (nur Architektur vorbereiten)
-- Punkt-Drag-Editing
-- Track-Merge
-- Glaettung/Filter
-- Zusatzformate (FIT/TCX)
-- Komplexe Offline-Packaging-Loesung (MBTiles/PMTiles)
+### Not in MVP (Intentionally Moved to v1.1)
+- Undo/Redo (prepare architecture only)
+- Point drag editing
+- Track merge
+- Smoothing/filtering
+- Additional formats (FIT/TCX)
+- Complex offline packaging solution (MBTiles/PMTiles)
 
-## Architekturprinzipien
+## Architecture Principles
 
-### Datenmodell
-- Trenne klar zwischen:
-  - GPX-Domainmodell (Track/Segment/Punkt/Metadaten)
-  - Renderdaten (vereinfachte Geometrien, LOD)
-  - Editieroperationen (Command-Objekte)
-- Halte unbekannte GPX-Extensions als raw XML-Strukturen, damit Roundtrip verlustarm bleibt.
+### Data Model
+- Clearly separate:
+  - GPX domain model (track/segment/point/metadata)
+  - Render data (simplified geometries, LOD)
+  - Editing operations (command objects)
+- Keep unknown GPX extensions as raw XML structures so roundtrip remains low-loss.
 
-### Verarbeitung grosser Tracks
-- Chunk-basierte Speicherung grosser Punktmengen (z. B. 25k Punkte pro Chunk, spaeter tunebar)
-- Segment- und Bereichsindizes fuer schnelle Editierzugriffe
-- Hintergrundverarbeitung fuer Parsing und Vorberechnung, UI-Thread bleibt responsiv
+### Processing Large Tracks
+- Chunk-based storage of large point sets (for example, 25k points per chunk, tunable later)
+- Segment and range indexes for fast editing access
+- Background processing for parsing and precomputation, while the UI thread stays responsive
 
 ### Rendering
-- Viewport-basiertes Zeichnen
-- Zoomabhaengige Vereinfachung (LOD)
-- Inkrementelles Update statt Voll-Redraw bei jeder Interaktion
+- Viewport-based drawing
+- Zoom-dependent simplification (LOD)
+- Incremental updates instead of full redraw on every interaction
 
 ### Interop C# <-> JS
-- Halte Payloads klein und chunked
-- Vermeide haeufige Chatty-Calls zwischen .NET und JS
-- Definiere stabile DTOs fuer Koordinaten- und Segmentdaten
+- Keep payloads small and chunked
+- Avoid frequent chatty calls between .NET and JS
+- Define stable DTOs for coordinate and segment data
 
-## Qualitaetsregeln
+## Quality Rules
 
-### Korrektheit
-- Jede Editieroperation muss deterministisch und testbar sein.
-- Exportierte GPX-Dateien muessen in Dritttools oeffnen (z. B. QGIS, Garmin BaseCamp).
+### Correctness
+- Every edit operation must be deterministic and testable.
+- Exported GPX files must open in third-party tools (for example, QGIS, Garmin BaseCamp).
 
-### Stabilitaet
-- Fehler werden benutzerverstaendlich gemeldet, nie still geschluckt.
-- Grosse Dateien duerfen die UI nicht dauerhaft blockieren.
+### Stability
+- Errors are reported in a user-understandable way and are never silently swallowed.
+- Large files must not permanently block the UI.
 
-### Wartbarkeit
-- Klare Schichtentrennung:
+### Maintainability
+- Clear layer separation:
   - App/UI
-  - Core (Domain, IO, Editing)
+  - Core (domain, IO, editing)
   - MapBridge (WebView2/JS)
-- Keine Businesslogik in XAML Code-Behind ausser UI-nahe Glue-Logik.
+- No business logic in XAML code-behind except UI-adjacent glue logic.
 
-## Empfohlene Projektstruktur
+## Recommended Project Structure
 
 - src/GpxCut.App
-  - WPF App, Views, ViewModels
+  - WPF app, views, view models
 - src/GpxCut.Core
-  - Domain, GPX IO, Editing Commands, Validierung
+  - Domain, GPX IO, editing commands, validation
 - src/GpxCut.MapBridge
-  - WebView2 Interop + MapLibre Host Assets
+  - WebView2 interop + MapLibre host assets
 - tests/GpxCut.Core.Tests
-  - Unit Tests fuer Core-Logik
+  - Unit tests for core logic
 - tests/GpxCut.Perf
-  - Benchmark-/Performance-Tests
+  - Benchmark/performance tests
 - docs
-  - Architektur-, Performance- und User-Dokumentation
+  - Architecture, performance, and user documentation
 
-## Skills- und Agent-Nutzung im Projekt
+## Skill and Agent Usage in the Project
 
-Diese Rubrik dokumentiert, wann welcher Skill genutzt werden soll, damit die Agent-Arbeit konsistent bleibt.
+This section documents when each skill should be used to keep agent work consistent.
 
 ### project-setup-info-local
-Nutzen wenn:
-- komplettes Initial-Scaffolding erzeugt werden soll
-- neues Subprojekt (z. B. Testprojekt, Tooling-Workspace) aufgesetzt wird
-Nicht nutzen fuer:
-- einzelne Datei-Edits
+Use when:
+- complete initial scaffolding should be generated
+- a new subproject (for example, test project, tooling workspace) should be set up
+Do not use for:
+- single-file edits
 
 ### get-search-view-results
-Nutzen wenn:
-- VS Code Search View als Quelle fuer bereits gefundene Treffer ausgewertet werden soll
+Use when:
+- VS Code Search view should be used as a source for evaluating already-found matches
 
 ### troubleshoot
-Nutzen wenn:
-- Verhalten des Chat-Agenten, Tool-Auswahl oder unerwartete Laufzeit analysiert werden muss
+Use when:
+- chat agent behavior, tool selection, or unexpected runtime behavior must be analyzed
 
 ### agent-customization
-Nutzen wenn:
-- Instruktionsdateien fuer Agenten angepasst oder debuggt werden (AGENTS.md, copilot-instructions usw.)
+Use when:
+- instruction files for agents should be adapted or debugged (AGENTS.md, copilot-instructions, and similar)
 
 ### chronicle
-Nutzen wenn:
-- Session-Historie, Standup-Auswertungen oder Worklog-Rueckblicke benoetigt werden
+Use when:
+- session history, standup summaries, or worklog retrospectives are needed
 
-## Detaillierter Projektplan (Fastest MVP)
+## Detailed Project Plan (Fastest MVP)
 
-## Phase A: Setup und lauffaehiger Kern (Tag 1-2)
+## Phase A: Setup and Runnable Core (Day 1-2)
 
-### Ziele
-- Projekt aufsetzen und lokal startbar machen
-- Karte sichtbar
-- Erstes GPX laden und als Linie anzeigen
+### Goals
+- Set up project and make it runnable locally
+- Make map visible
+- Load first GPX and display as a line
 
-### Arbeitspakete
-1. Solution mit 3 Projekten anlegen (App, Core, MapBridge)
-2. WPF MainWindow mit Kartenflaeche und minimaler Toolbar
-3. WebView2 integrieren und MapLibre Hostseite laden
-4. OSM-Tiles anbinden
-5. GPX-Reader im Core implementieren (streaming-orientiert)
-6. Basistransfer der Trackpunkte an JS-Renderer
+### Work Packages
+1. Create solution with 3 projects (App, Core, MapBridge)
+2. Create WPF MainWindow with map area and minimal toolbar
+3. Integrate WebView2 and load MapLibre host page
+4. Connect OSM tiles
+5. Implement GPX reader in Core (streaming-oriented)
+6. Basic transfer of track points to JS renderer
 
-### Abnahme
-- App startet
-- Beispiel-GPX wird geladen
-- Track ist auf OSM sichtbar
+### Acceptance
+- App starts
+- Sample GPX loads
+- Track is visible on OSM
 
-## Phase B: Kern-Editing v1 (Tag 3-6)
+## Phase B: Core Editing v1 (Day 3-6)
 
-### Ziele
-- Drei Kernoperationen Ende-zu-Ende
+### Goals
+- Three core operations working end to end
 
-### Arbeitspakete
-1. SplitTrackCommand implementieren
-2. DeleteRangeCommand implementieren
-3. SaveSegmentCommand implementieren
-4. UI-Interaktionen fuer Auswahl/Markierung/Splitpunkt
-5. GPX-Writer mit Metadaten-Erhalt fuer unveraenderte Punkte
-6. Grundlegende Validierung der Eingaben (ungueltige Bereichsgrenzen etc.)
+### Work Packages
+1. Implement SplitTrackCommand
+2. Implement DeleteRangeCommand
+3. Implement SaveSegmentCommand
+4. Add UI interactions for selection/marking/split point
+5. Implement GPX writer with metadata preservation for unchanged points
+6. Add basic input validation (invalid range boundaries, etc.)
 
-### Abnahme
-- Nutzer kann auf grossen Tracks splitten, loeschen, teil-exportieren
-- Exportdateien sind gueltig und in Fremdtools lesbar
+### Acceptance
+- User can split, delete, and export partial tracks on large datasets
+- Export files are valid and readable in third-party tools
 
-## Phase C: Performance-Baseline (Tag 7-9)
+## Phase C: Performance Baseline (Day 7-9)
 
-### Ziele
-- Grossdateien robust und fluessig nutzbar
+### Goals
+- Make large files robust and smooth to use
 
-### Arbeitspakete
-1. Chunking im Core finalisieren
-2. Viewport-Only Rendering im JS-Renderer
-3. Einfache LOD-Regeln je Zoomstufe
-4. Hintergrund-Tasks fuer Laden/Vorberechnung
-5. Erster Tile-Cache mit Speicherlimit
+### Work Packages
+1. Finalize chunking in Core
+2. Implement viewport-only rendering in JS renderer
+3. Add simple LOD rules by zoom level
+4. Add background tasks for loading/precomputation
+5. Add first tile cache with storage limit
 
-### Abnahme
-- 1M Punkte laden in <= 10s auf Referenzhardware (Ziel)
-- Pan/Zoom subjektiv fluessig, Ziel >= 30 FPS
+### Acceptance
+- Load 1M points in <= 10s on reference hardware (target)
+- Pan/zoom feels smooth, target >= 30 FPS
 
-## Phase D: Stabilisierung und Release Prep (Tag 10-12)
+## Phase D: Stabilization and Release Prep (Day 10-12)
 
-### Ziele
-- Fehlerfaelle abfangen
-- Release-Kandidat erstellen
+### Goals
+- Handle error cases
+- Create release candidate
 
-### Arbeitspakete
-1. Fehlerpfade: defekte GPX, Leerdaten, Abbruch waehrend Laden
-2. Logging verbessern (Fehlercodes + Kontext)
-3. Unit-Tests fuer Editing-Kommandos
-4. Roundtrip-Tests fuer Metadaten/Extensions
-5. Packaging fuer Windows (Installer)
+### Work Packages
+1. Error paths: broken GPX, empty data, cancellation during loading
+2. Improve logging (error codes + context)
+3. Add unit tests for editing commands
+4. Add roundtrip tests for metadata/extensions
+5. Add Windows packaging (installer)
 
-### Abnahme
-- Kein kritischer Crash in Kernworkflow
-- Installierbares Paket vorhanden
+### Acceptance
+- No critical crash in core workflow
+- Installable package is available
 
-## Phase E: Puffertage und Feinschliff (Tag 13-14)
+## Phase E: Buffer Days and Polish (Day 13-14)
 
-### Ziele
-- Restarbeiten schliessen
-- Dokumentation vervollstaendigen
+### Goals
+- Close remaining tasks
+- Complete documentation
 
-### Arbeitspakete
-1. UI-Feinschliff (Statusanzeigen, Progress, Fehlermeldungen)
-2. Kurze User-Doku (Laden, Split, Loeschen, Export)
-3. Technische Doku (Architektur + bekannte Limits)
-4. Release-Checkliste durchgehen
+### Work Packages
+1. UI polish (status indicators, progress, error messages)
+2. Short user documentation (load, split, delete, export)
+3. Technical documentation (architecture + known limits)
+4. Review release checklist
 
-### Abnahme
-- MVP intern releasefaehig
+### Acceptance
+- MVP is internally release-ready
 
-## Test- und Messstrategie
+## Test and Measurement Strategy
 
-### Funktionaltests
-- GPX mit mehreren Segmenten
-- Split am Anfang/Mitte/Ende
-- Bereichsloeschung ueber Segmentgrenzen
-- Teiltrack-Export nach mehreren Operationen
+### Functional Tests
+- GPX with multiple segments
+- Split at beginning/middle/end
+- Range deletion across segment boundaries
+- Partial track export after multiple operations
 
-### Integritaetstests
-- GPX Roundtrip mit Zeit/Hoehe/Extensions
-- Vergleich Original vs. Export fuer unveraenderte Punkte
+### Integrity Tests
+- GPX roundtrip with time/elevation/extensions
+- Compare original vs. export for unchanged points
 
-### Performance-Tests
-- Datensaetze: 100k, 500k, 1M Punkte
-- Messwerte:
-  - Parsezeit
-  - Zeit bis erste Visualisierung
-  - Interaktionsfluessigkeit beim Pan/Zoom
-  - Speicherverbrauch Peak/steady
+### Performance Tests
+- Datasets: 100k, 500k, 1M points
+- Metrics:
+  - Parse time
+  - Time to first visualization
+  - Interaction smoothness during pan/zoom
+  - Memory usage peak/steady
 
-## Risiko- und Gegenmassnahmen
+## Risks and Countermeasures
 
-1. Risiko: WebView2-Bridge wird bei 1M Punkten zum Flaschenhals
-- Gegenmassnahme: chunked Transfer, vereinfachte Geometrie, nur sichtbare Daten
+1. Risk: WebView2 bridge becomes a bottleneck at 1M points
+- Countermeasure: chunked transfer, simplified geometry, visible data only
 
-2. Risiko: GPX-Extensions gehen beim Schreiben verloren
-- Gegenmassnahme: raw XML passthrough + Roundtrip-Tests frueh aufsetzen
+2. Risk: GPX extensions are lost during writing
+- Countermeasure: raw XML passthrough + early roundtrip tests
 
-3. Risiko: UI freeze bei langen Operationen
-- Gegenmassnahme: async pipelines, CancellationToken, Fortschrittsanzeige
+3. Risk: UI freezes during long operations
+- Countermeasure: async pipelines, CancellationToken, progress indicators
 
-4. Risiko: OSM-Tile-Nutzungslimits
-- Gegenmassnahme: Caching, spaeter eigene Tile-Infrastruktur pruefen
+4. Risk: OSM tile usage limits
+- Countermeasure: caching, evaluate own tile infrastructure later
 
-## v1.1 Backlog (vorpriorisiert)
+## v1.1 Backlog (Pre-Prioritized)
 
-1. Undo/Redo als vollwertiges Command-History-System
-2. Erweiterte Renderoptimierung und tieferes Profiling
-3. Erweiterter Offline-Modus (z. B. MBTiles/PMTiles)
-4. Zusatzformate FIT/TCX
-5. Erweiterte Editierwerkzeuge (Merge, Punktbearbeitung, Filter)
+1. Undo/Redo as a full command history system
+2. Advanced rendering optimization and deeper profiling
+3. Extended offline mode (for example, MBTiles/PMTiles)
+4. Additional formats FIT/TCX
+5. Advanced editing tools (merge, point editing, filters)
 
-## Arbeitsmodus fuer Agenten im Repo
+## Working Mode for Agents in This Repo
 
-- Erst Verstaendnis und Scope pruefen, dann implementieren.
-- Kleine, gezielte Commits pro Arbeitspaket.
-- Nach jedem groesseren Schritt Build + Tests laufen lassen.
-- Bei Zielkonflikten hat Datenintegritaet Vorrang vor Zusatzfeatures.
-- Bei Unsicherheit ueber Metadatenverhalten konservativ handeln und explizit dokumentieren.
+- First verify understanding and scope, then implement.
+- Make small, focused commits per work package.
+- Run build + tests after each larger step.
+- If goals conflict, data integrity has priority over extra features.
+- If metadata behavior is uncertain, act conservatively and document explicitly.

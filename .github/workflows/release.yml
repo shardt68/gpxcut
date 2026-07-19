@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-restore
+
+      - name: Publish app
+        shell: pwsh
+        run: |
+          scripts/release/publish-gpxcut.ps1 -Configuration Release -Runtime win-x64
+
+      - name: Create installer layout
+        shell: pwsh
+        run: |
+          scripts/release/create-installer-layout.ps1 -Runtime win-x64
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          installer/wix/build-msi.ps1 -Version "${{ steps.version.outputs.VERSION }}" -Runtime win-x64
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "GpxCut ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## GpxCut ${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            Download `GpxCut-${{ steps.version.outputs.VERSION }}-win-x64.msi` und ausführen.
+
+            **Voraussetzungen:** Windows 10/11 x64, [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (meist bereits installiert)
+          files: |
+            artifacts/installer/win-x64/GpxCut-${{ steps.version.outputs.VERSION }}-win-x64.msi
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

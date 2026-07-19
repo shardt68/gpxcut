@@ -34,6 +34,17 @@ Use this skill when the task mentions one or more of:
 4. Preserve unmodified GPX metadata and unknown extensions.
 5. For large files, prefer streaming/chunk-aware approaches.
 6. After changes, run build and tests relevant to touched areas.
+7. Keep all project documentation updates in English.
+
+## Release Requests (Mandatory Behavior)
+
+If the user explicitly requests a downloadable release, follow this sequence:
+
+1. Implement and commit all required changes.
+2. Merge into the release branch (`master` in this repository).
+3. Create and push a `v*` tag on the merged commit.
+4. Rely on `.github/workflows/release.yml` to build the MSI and publish the GitHub Release asset.
+5. Verify the release page contains `GpxCut-<version>-win-x64.msi`.
 
 ## Quality Gates
 
@@ -41,10 +52,13 @@ Use this skill when the task mentions one or more of:
 - Stability: errors are surfaced with actionable messages.
 - Performance: avoid full redraws and chatty C#-JS bridging.
 - Integrity: exported GPX should remain valid in third-party tools.
+- Documentation: all added or edited documentation is written in English.
 
 ## References
 
 See [project reference](references/REFERENCE.md) for overall architecture.
+
+- [Software Architecture](references/software-architecture.md)
 
 **Feature specifications** (detailed acceptance criteria, technical requirements, test strategy):
 - [Open GPX](references/features/open-gpx.md)
