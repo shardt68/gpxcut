@@ -28,6 +28,10 @@
     zoom: 8
   });
 
+  const profilePanel = document.getElementById("profile-panel");
+  const profileCanvas = document.getElementById("profile-canvas");
+  const profileContext = profileCanvas ? profileCanvas.getContext("2d") : null;
+
   const emptyTrack = {
     type: "FeatureCollection",
     features: [
@@ -71,6 +75,13 @@
   let hoverTimerId = null;
   let hoverRequestToken = 0;
   let hoverPopup = null;
+  let profileVisible = false;
+  let profileMode = "time";
+  let profilePoints = [];
+  let profileSelection = {
+    startIndex: null,
+    endIndex: null
+  };
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Shift") {
@@ -331,6 +342,330 @@
     }
   }
 
+  function formatProfileX(value) {
+    if (profileMode === "time") {
+      const totalSeconds = Math.max(0, value);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    return `${(value / 1000).toFixed(2)} km`;
+  }
+
+  function profileXTitle() {
+    return profileMode === "time" ? "Time" : "Distance";
+  }
+
+  function applyProfileVisible(visible) {
+    profileVisible = !!visible;
+    if (!profilePanel) {
+      return;
+    }
+
+    profilePanel.classList.toggle("hidden", !profileVisible);
+
+    requestAnimationFrame(() => {
+      map.resize();
+      resizeProfileCanvas();
+      drawProfile();
+    });
+  }
+
+  function applyProfileData(payload) {
+    if (!payload || !Array.isArray(payload.points)) {
+      profilePoints = [];
+      drawProfile();
+      return;
+    }
+
+    profileMode = payload.mode === "distance" ? "distance" : "time";
+    profilePoints = payload.points
+      .filter((point) => point && Number.isFinite(point.index) && Number.isFinite(point.x) && Number.isFinite(point.y))
+      .map((point) => ({
+        index: point.index,
+        x: point.x,
+        y: point.y
+      }));
+
+    drawProfile();
+  }
+
+  function applyProfileSelection(payload) {
+    profileSelection = {
+      startIndex: Number.isFinite(payload?.startIndex) ? payload.startIndex : null,
+      endIndex: Number.isFinite(payload?.endIndex) ? payload.endIndex : null
+    };
+
+    drawProfile();
+  }
+
+  function resetProfile() {
+    profilePoints = [];
+    profileSelection = {
+      startIndex: null,
+      endIndex: null
+    };
+    drawProfile();
+  }
+
+  function resizeProfileCanvas() {
+    if (!profileCanvas || !profilePanel || !profileContext || !profileVisible) {
+      return;
+    }
+
+    const rect = profilePanel.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    const dpr = window.devicePixelRatio || 1;
+
+    profileCanvas.width = Math.floor(width * dpr);
+    profileCanvas.height = Math.floor(height * dpr);
+    profileCanvas.style.width = `${width}px`;
+    profileCanvas.style.height = `${height}px`;
+  }
+
+  function resolveSelectionRange() {
+    if (profileSelection.startIndex == null && profileSelection.endIndex == null) {
+      return null;
+    }
+
+    if (profileSelection.startIndex == null) {
+      return {
+        start: profileSelection.endIndex,
+        end: profileSelection.endIndex
+      };
+    }
+
+    if (profileSelection.endIndex == null) {
+      return {
+        start: profileSelection.startIndex,
+        end: profileSelection.startIndex
+      };
+    }
+
+    return {
+      start: Math.min(profileSelection.startIndex, profileSelection.endIndex),
+      end: Math.max(profileSelection.startIndex, profileSelection.endIndex)
+    };
+  }
+
+  function getNearestSampleByIndex(targetIndex) {
+    if (profilePoints.length === 0 || !Number.isFinite(targetIndex)) {
+      return null;
+    }
+
+    let best = null;
+    let bestDelta = Number.POSITIVE_INFINITY;
+
+    for (const sample of profilePoints) {
+      const delta = Math.abs(sample.index - targetIndex);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        best = sample;
+      }
+    }
+
+    return best;
+  }
+
+  function drawProfile() {
+    if (!profileVisible || !profileContext || !profileCanvas || !profilePanel) {
+      return;
+    }
+
+    resizeProfileCanvas();
+
+    const dpr = window.devicePixelRatio || 1;
+    const width = profileCanvas.width / dpr;
+    const height = profileCanvas.height / dpr;
+
+    profileContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+    profileContext.clearRect(0, 0, width, height);
+
+    profileContext.fillStyle = "#f7f7f8";
+    profileContext.fillRect(0, 0, width, height);
+
+    const margin = {
+      left: 54,
+      right: 16,
+      top: 14,
+      bottom: 30
+    };
+
+    const chartWidth = Math.max(1, width - margin.left - margin.right);
+    const chartHeight = Math.max(1, height - margin.top - margin.bottom);
+
+    profileContext.strokeStyle = "#d1d5db";
+    profileContext.lineWidth = 1;
+    profileContext.strokeRect(margin.left, margin.top, chartWidth, chartHeight);
+
+    if (profilePoints.length === 0) {
+      profileContext.fillStyle = "#6b7280";
+      profileContext.font = "12px Segoe UI";
+      profileContext.fillText("No profile data available for current mode.", margin.left + 8, margin.top + 20);
+      return;
+    }
+
+    let minX = profilePoints[0].x;
+    let maxX = profilePoints[0].x;
+    let minY = profilePoints[0].y;
+    let maxY = profilePoints[0].y;
+
+    for (const point of profilePoints) {
+      minX = Math.min(minX, point.x);
+      maxX = Math.max(maxX, point.x);
+      minY = Math.min(minY, point.y);
+      maxY = Math.max(maxY, point.y);
+    }
+
+    if (maxX - minX < 1e-9) {
+      maxX = minX + 1;
+    }
+
+    if (maxY - minY < 1e-9) {
+      maxY = minY + 1;
+    }
+
+    const toCanvasX = (value) => margin.left + ((value - minX) / (maxX - minX)) * chartWidth;
+    const toCanvasY = (value) => margin.top + chartHeight - ((value - minY) / (maxY - minY)) * chartHeight;
+
+    const selection = resolveSelectionRange();
+    if (selection) {
+      const startSample = getNearestSampleByIndex(selection.start);
+      const endSample = getNearestSampleByIndex(selection.end);
+
+      if (startSample && endSample) {
+        const startX = Math.min(toCanvasX(startSample.x), toCanvasX(endSample.x));
+        const endX = Math.max(toCanvasX(startSample.x), toCanvasX(endSample.x));
+
+        profileContext.fillStyle = "rgba(245, 158, 11, 0.18)";
+        profileContext.fillRect(startX, margin.top, Math.max(1, endX - startX), chartHeight);
+      }
+    }
+
+    profileContext.beginPath();
+    profileContext.lineWidth = 1.8;
+    profileContext.strokeStyle = "#2563eb";
+
+    for (let idx = 0; idx < profilePoints.length; idx++) {
+      const point = profilePoints[idx];
+      const x = toCanvasX(point.x);
+      const y = toCanvasY(point.y);
+
+      if (idx === 0) {
+        profileContext.moveTo(x, y);
+      } else {
+        profileContext.lineTo(x, y);
+      }
+    }
+
+    profileContext.stroke();
+
+    if (profileSelection.startIndex != null) {
+      const sample = getNearestSampleByIndex(profileSelection.startIndex);
+      if (sample) {
+        const x = toCanvasX(sample.x);
+        profileContext.strokeStyle = "#2563eb";
+        profileContext.lineWidth = 1;
+        profileContext.beginPath();
+        profileContext.moveTo(x, margin.top);
+        profileContext.lineTo(x, margin.top + chartHeight);
+        profileContext.stroke();
+      }
+    }
+
+    if (profileSelection.endIndex != null) {
+      const sample = getNearestSampleByIndex(profileSelection.endIndex);
+      if (sample) {
+        const x = toCanvasX(sample.x);
+        profileContext.strokeStyle = "#ea580c";
+        profileContext.lineWidth = 1;
+        profileContext.beginPath();
+        profileContext.moveTo(x, margin.top);
+        profileContext.lineTo(x, margin.top + chartHeight);
+        profileContext.stroke();
+      }
+    }
+
+    profileContext.fillStyle = "#111827";
+    profileContext.font = "11px Segoe UI";
+    profileContext.fillText("Elevation (m)", margin.left, margin.top - 2);
+    profileContext.fillText(profileXTitle(), width - margin.right - 65, height - 8);
+
+    profileContext.fillStyle = "#4b5563";
+    profileContext.font = "10px Segoe UI";
+    profileContext.fillText(formatProfileX(minX), margin.left, height - 10);
+    profileContext.fillText(formatProfileX(maxX), Math.max(margin.left + 30, width - margin.right - 80), height - 10);
+    profileContext.fillText(`${minY.toFixed(0)} m`, 8, height - margin.bottom + 4);
+    profileContext.fillText(`${maxY.toFixed(0)} m`, 8, margin.top + 4);
+  }
+
+  function findNearestSampleByCanvasX(canvasX) {
+    if (profilePoints.length === 0 || !profileCanvas) {
+      return null;
+    }
+
+    const width = profileCanvas.clientWidth;
+    const margin = {
+      left: 54,
+      right: 16
+    };
+    const chartWidth = Math.max(1, width - margin.left - margin.right);
+
+    let minX = profilePoints[0].x;
+    let maxX = profilePoints[0].x;
+    for (const point of profilePoints) {
+      minX = Math.min(minX, point.x);
+      maxX = Math.max(maxX, point.x);
+    }
+
+    if (maxX - minX < 1e-9) {
+      maxX = minX + 1;
+    }
+
+    const clampedX = Math.max(margin.left, Math.min(width - margin.right, canvasX));
+    const targetValue = minX + ((clampedX - margin.left) / chartWidth) * (maxX - minX);
+
+    let best = null;
+    let bestDelta = Number.POSITIVE_INFINITY;
+    for (const point of profilePoints) {
+      const delta = Math.abs(point.x - targetValue);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        best = point;
+      }
+    }
+
+    return best;
+  }
+
+  if (profileCanvas) {
+    profileCanvas.addEventListener("click", (event) => {
+      if (!profileVisible || !window.chrome?.webview) {
+        return;
+      }
+
+      const rect = profileCanvas.getBoundingClientRect();
+      const canvasX = event.clientX - rect.left;
+      const nearest = findNearestSampleByCanvasX(canvasX);
+      if (!nearest) {
+        return;
+      }
+
+      window.chrome.webview.postMessage({
+        type: "profile-click",
+        index: nearest.index,
+        shiftKey: !!event.shiftKey || isShiftPressed
+      });
+    });
+  }
+
+  window.addEventListener("resize", () => {
+    drawProfile();
+  });
+
   window.gpxcutMap = {
     clearTrack() {
       setCoordinates([]);
@@ -422,6 +757,22 @@
       setSelectionMarkers(features);
     },
 
+    setProfileVisible(visible) {
+      applyProfileVisible(visible);
+    },
+
+    setProfileData(payload) {
+      applyProfileData(payload);
+    },
+
+    setProfileSelection(payload) {
+      applyProfileSelection(payload || {});
+    },
+
+    clearProfile() {
+      resetProfile();
+    },
+
     setEndpoints(payload) {
       if (!payload || !Array.isArray(payload.start) || !Array.isArray(payload.end)) {
         setEndpoints([]);
@@ -473,6 +824,7 @@
     ensureEndpointLayer();
     ensureSelectionLayer();
     ensureSelectionMarkerLayer();
+    applyProfileVisible(false);
     if (window.chrome?.webview) {
       window.chrome.webview.postMessage("map-ready");
     }

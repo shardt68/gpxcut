@@ -78,6 +78,32 @@ public static class MapScriptFactory
         yield return $"window.gpxcutMap.setSelectionMarkers({markersJson});";
     }
 
+    public static IEnumerable<string> BuildProfileVisibilityScripts(bool visible)
+    {
+        yield return $"window.gpxcutMap.setProfileVisible({(visible ? "true" : "false")});";
+    }
+
+    public static IEnumerable<string> BuildSetProfileDataScripts(string payloadJson)
+    {
+        yield return $"window.gpxcutMap.setProfileData({payloadJson});";
+    }
+
+    public static IEnumerable<string> BuildProfileSelectionScripts(int? startIndex, int? endIndex)
+    {
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            startIndex,
+            endIndex
+        });
+
+        yield return $"window.gpxcutMap.setProfileSelection({payloadJson});";
+    }
+
+    public static IEnumerable<string> BuildClearProfileScripts()
+    {
+        yield return "window.gpxcutMap.clearProfile();";
+    }
+
     private static IEnumerable<List<double[]>> ChunkTrack(TrackDocument document, int chunkSize)
     {
         if (chunkSize <= 0)

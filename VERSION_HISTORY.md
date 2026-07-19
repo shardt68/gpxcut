@@ -1,5 +1,22 @@
 # Version History
 
+## 0.1.15 - 2026-07-19
+
+### Type
+- Feature
+
+### Added
+- Optionales Hoehenprofil als einblendbares Panel unter der Karte.
+- Zwei Profilmodi: Hoehe ueber Zeit und Hoehe ueber Strecke.
+- Bidirektionale Synchronisierung der Auswahl zwischen Karte und Diagramm.
+
+### Changed
+- Erweiterte WebView2-Bridge fuer Profilsteuerung (Sichtbarkeit, Daten, Selektion).
+- Map-Host um Profil-Canvas und Renderinglogik erweitert.
+
+### Notes
+- Profil ist standardmaessig ausgeblendet und kann bei geladenem Track aktiviert werden.
+
 ## 0.1.14 - 2026-07-19
 
 ### Type

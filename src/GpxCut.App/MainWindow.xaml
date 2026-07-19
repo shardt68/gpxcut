@@ -51,6 +51,24 @@
                 Content="Export Range"
                 IsEnabled="False"
                 Click="ExportRangeButton_Click" />
+            <CheckBox x:Name="ShowProfileCheckBox"
+                      Margin="12,0,0,0"
+                      VerticalAlignment="Center"
+                      Content="Show Profile"
+                      IsEnabled="False"
+                      Checked="ShowProfileCheckBox_Checked"
+                      Unchecked="ShowProfileCheckBox_Unchecked" />
+            <ComboBox x:Name="ProfileModeComboBox"
+                      Width="190"
+                      Height="30"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center"
+                      IsEnabled="False"
+                      SelectionChanged="ProfileModeComboBox_SelectionChanged"
+                      SelectedIndex="0">
+                <ComboBoxItem Content="Height over Time" />
+                <ComboBoxItem Content="Height over Distance" />
+            </ComboBox>
             <TextBlock x:Name="TrackSummaryTextBlock"
                        Margin="12,0,0,0"
                        VerticalAlignment="Center"

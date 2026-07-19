@@ -8,7 +8,12 @@
   <link href="./map.css" rel="stylesheet">
 </head>
 <body>
-  <div id="map"></div>
+  <div id="layout">
+    <div id="map"></div>
+    <section id="profile-panel" class="hidden" aria-label="Height profile">
+      <canvas id="profile-canvas"></canvas>
+    </section>
+  </div>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="./map.js"></script>
 </body>

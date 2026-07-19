@@ -12,6 +12,7 @@ using Microsoft.Win32;
 using Microsoft.Web.WebView2.Core;
 using System.Windows.Threading;
 using System.Windows.Input;
+using System.Windows.Controls;
 
 namespace GpxCut.App;
 
@@ -37,6 +38,12 @@ public partial class MainWindow : Window
     private const double ClickToleranceMeters = 20.0;
     private const double HoverToleranceMeters = 35.0;
     private const int FastStepSize = 10;
+    private const int MaxProfileSamples = 4_000;
+    private const string ProfileModeTime = "time";
+    private const string ProfileModeDistance = "distance";
+
+    private bool _isProfileVisible;
+    private string _profileMode = ProfileModeTime;
 
     public MainWindow()
         : this(null)
@@ -53,6 +60,7 @@ public partial class MainWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _profileMode = GetSelectedProfileModeFromUi();
         await InitializeMapAsync();
     }
 
@@ -217,6 +225,19 @@ public partial class MainWindow : Window
                 return;
             }
 
+            if (string.Equals(messageType, "profile-click", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!root.TryGetProperty("index", out var indexNode) || indexNode.ValueKind != JsonValueKind.Number)
+                {
+                    return;
+                }
+
+                var profileShiftKey = root.TryGetProperty("shiftKey", out var profileShiftNode) && profileShiftNode.GetBoolean();
+                var profileUseEndMarker = profileShiftKey || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+                await HandleProfileClickSelectionAsync(indexNode.GetInt32(), profileUseEndMarker);
+                return;
+            }
+
             if (!string.Equals(messageType, "map-click", StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -295,6 +316,7 @@ public partial class MainWindow : Window
 
             await RenderTrackAsync(document, includeFitBounds: true);
             await ExecuteScriptsAsync(MapScriptFactory.BuildClearSelectionScripts());
+            await RefreshProfileAsync();
 
             UpdateTrackSummary();
             SetStatus($"Loaded {document.TotalPoints:N0} points across {document.Segments.Count} segment(s).");
@@ -362,6 +384,35 @@ public partial class MainWindow : Window
         else
         {
             _selectionStartIndex = nearest.Value;
+        }
+
+        await UpdateSelectionVisualizationAsync();
+    }
+
+    private async Task HandleProfileClickSelectionAsync(int globalIndex, bool useEndMarker)
+    {
+        if (_isBusy || _currentDocument is null || _indexedPoints.Count == 0)
+        {
+            return;
+        }
+
+        if (globalIndex < 0 || globalIndex >= _indexedPoints.Count)
+        {
+            return;
+        }
+
+        if (useEndMarker)
+        {
+            if (_selectionStartIndex is null)
+            {
+                _selectionStartIndex = globalIndex;
+            }
+
+            _selectionEndIndex = globalIndex;
+        }
+        else
+        {
+            _selectionStartIndex = globalIndex;
         }
 
         await UpdateSelectionVisualizationAsync();
@@ -567,6 +618,7 @@ public partial class MainWindow : Window
         }
 
         await ExecuteScriptsAsync(MapScriptFactory.BuildSelectionScripts(selectionCoordinates, startCoordinate, endCoordinate));
+        await ExecuteScriptsAsync(MapScriptFactory.BuildProfileSelectionScripts(_selectionStartIndex, _selectionEndIndex));
 
         UpdateTrackSummary();
         UpdateActionButtons();
@@ -629,6 +681,8 @@ public partial class MainWindow : Window
         var hasRange = GetNormalizedSelection() is not null;
         DeleteRangeButton.IsEnabled = !_isBusy && hasRange;
         ExportRangeButton.IsEnabled = !_isBusy && hasRange;
+        ShowProfileCheckBox.IsEnabled = !_isBusy && _currentDocument is not null;
+        ProfileModeComboBox.IsEnabled = !_isBusy && _currentDocument is not null && _isProfileVisible;
     }
 
     private int? GetSplitIndex()
@@ -820,6 +874,7 @@ public partial class MainWindow : Window
 
             await RenderTrackAsync(_currentDocument, includeFitBounds: false);
             await ExecuteScriptsAsync(MapScriptFactory.BuildClearSelectionScripts());
+            await RefreshProfileAsync();
 
             UpdateTrackSummary();
             _hasUnsavedChanges = true;
@@ -987,6 +1042,146 @@ public partial class MainWindow : Window
         return Path.GetDirectoryName(_currentFilePath);
     }
 
+    private async void ShowProfileCheckBox_Checked(object sender, RoutedEventArgs e)
+    {
+        _isProfileVisible = true;
+        UpdateActionButtons();
+        await RefreshProfileAsync();
+    }
+
+    private async void ShowProfileCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        _isProfileVisible = false;
+        UpdateActionButtons();
+        await RefreshProfileAsync();
+    }
+
+    private async void ProfileModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _profileMode = GetSelectedProfileModeFromUi();
+        if (!_isProfileVisible)
+        {
+            return;
+        }
+
+        await RefreshProfileAsync();
+    }
+
+    private string GetSelectedProfileModeFromUi()
+    {
+        return ProfileModeComboBox.SelectedIndex == 0 ? ProfileModeTime : ProfileModeDistance;
+    }
+
+    private async Task RefreshProfileAsync()
+    {
+        if (!_isMapReady)
+        {
+            return;
+        }
+
+        if (!_isProfileVisible)
+        {
+            await ExecuteScriptsAsync(MapScriptFactory.BuildProfileVisibilityScripts(false));
+            return;
+        }
+
+        if (_currentDocument is null || _indexedPoints.Count == 0)
+        {
+            await ExecuteScriptsAsync(MapScriptFactory.BuildClearProfileScripts());
+            await ExecuteScriptsAsync(MapScriptFactory.BuildProfileVisibilityScripts(true));
+            return;
+        }
+
+        var rawSamples = BuildProfileSamples();
+        var samples = DownsampleProfileSamples(rawSamples, MaxProfileSamples);
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            mode = _profileMode,
+            points = samples.Select(sample => new { index = sample.Index, x = sample.X, y = sample.Y })
+        });
+
+        await ExecuteScriptsAsync(MapScriptFactory.BuildSetProfileDataScripts(payloadJson));
+        await ExecuteScriptsAsync(MapScriptFactory.BuildProfileSelectionScripts(_selectionStartIndex, _selectionEndIndex));
+        await ExecuteScriptsAsync(MapScriptFactory.BuildProfileVisibilityScripts(true));
+    }
+
+    private List<ProfileSample> BuildProfileSamples()
+    {
+        return string.Equals(_profileMode, ProfileModeTime, StringComparison.Ordinal)
+            ? BuildTimeProfileSamples()
+            : BuildDistanceProfileSamples();
+    }
+
+    private List<ProfileSample> BuildTimeProfileSamples()
+    {
+        var samples = new List<ProfileSample>(_indexedPoints.Count);
+        DateTimeOffset? origin = null;
+
+        foreach (var indexed in _indexedPoints)
+        {
+            var point = indexed.Point;
+            if (point.Elevation is null || point.Time is null)
+            {
+                continue;
+            }
+
+            origin ??= point.Time.Value;
+            var seconds = (point.Time.Value - origin.Value).TotalSeconds;
+            samples.Add(new ProfileSample(indexed.GlobalIndex, seconds, point.Elevation.Value));
+        }
+
+        return samples;
+    }
+
+    private List<ProfileSample> BuildDistanceProfileSamples()
+    {
+        var samples = new List<ProfileSample>(_indexedPoints.Count);
+        var distanceMeters = 0.0;
+
+        for (var index = 0; index < _indexedPoints.Count; index++)
+        {
+            var current = _indexedPoints[index].Point;
+            if (index > 0)
+            {
+                var previous = _indexedPoints[index - 1].Point;
+                distanceMeters += GetDistanceMeters(previous.Latitude, previous.Longitude, current.Latitude, current.Longitude);
+            }
+
+            if (current.Elevation is null)
+            {
+                continue;
+            }
+
+            samples.Add(new ProfileSample(index, distanceMeters, current.Elevation.Value));
+        }
+
+        return samples;
+    }
+
+    private static List<ProfileSample> DownsampleProfileSamples(IReadOnlyList<ProfileSample> samples, int maxSamples)
+    {
+        if (samples.Count <= maxSamples || maxSamples <= 0)
+        {
+            return [.. samples];
+        }
+
+        var result = new List<ProfileSample>(maxSamples + 1);
+        var step = (int)Math.Ceiling(samples.Count / (double)maxSamples);
+
+        for (var index = 0; index < samples.Count; index += step)
+        {
+            result.Add(samples[index]);
+        }
+
+        var last = samples[^1];
+        if (result.Count == 0 || result[^1].Index != last.Index)
+        {
+            result.Add(last);
+        }
+
+        return result;
+    }
+
     private static double GetDistanceMeters(double lat1, double lon1, double lat2, double lon2)
     {
         const double earthRadiusMeters = 6_371_000;
@@ -1102,6 +1297,8 @@ public partial class MainWindow : Window
             // Logging must never break user workflows.
         }
     }
+
+    private sealed record ProfileSample(int Index, double X, double Y);
 
     private sealed record IndexedTrackPoint(int GlobalIndex, int SegmentIndex, int PointIndex, TrackPoint Point);
 }
