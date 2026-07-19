@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Text.Json;
 using System.Globalization;
@@ -62,11 +63,11 @@ public partial class MainWindow : Window
 
     private async Task InitializeMapAsync()
     {
-        var mapFilePath = Path.Combine(AppContext.BaseDirectory, "MapAssets", "map.html");
-        if (!File.Exists(mapFilePath))
+        var mapFilePath = ResolveMapHtmlPath();
+        if (mapFilePath is null)
         {
             SetStatus("Map initialization failed: MapAssets/map.html not found.");
-            LogError("MAP_INIT_ASSET", null, mapFilePath);
+            LogError("MAP_INIT_ASSET", null, "MapAssets/map.html not found in known locations");
             return;
         }
 
@@ -118,6 +119,43 @@ public partial class MainWindow : Window
             Path.Combine(localAppData, "GpxCut", "WebView2Fallback"),
             Path.Combine(tempPath, "GpxCut", "WebView2")
         ];
+    }
+
+    private static string? ResolveMapHtmlPath()
+    {
+        var candidates = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+        {
+            var processDir = Path.GetDirectoryName(Environment.ProcessPath);
+            if (!string.IsNullOrWhiteSpace(processDir))
+            {
+                candidates.Add(Path.Combine(processDir, "MapAssets", "map.html"));
+            }
+        }
+
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "MapAssets", "map.html"));
+        candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "MapAssets", "map.html"));
+
+        var process = Process.GetCurrentProcess();
+        if (!string.IsNullOrWhiteSpace(process.MainModule?.FileName))
+        {
+            var moduleDir = Path.GetDirectoryName(process.MainModule.FileName);
+            if (!string.IsNullOrWhiteSpace(moduleDir))
+            {
+                candidates.Add(Path.Combine(moduleDir, "MapAssets", "map.html"));
+            }
+        }
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private void CoreWebView2OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
