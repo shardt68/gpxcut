@@ -1,5 +1,21 @@
 # Version History
 
+## 0.1.16 - 2026-07-19
+
+### Type
+- Feature
+
+### Added
+- Neue Profilmodi fuer Geschwindigkeit: Speed over Time und Speed over Distance.
+- Dynamische Profilachsen-Beschriftung fuer Hoehe/Geschwindigkeit und Zeit/Distanz.
+
+### Changed
+- Geschwindigkeitsprofil wird aus Distanz und Zeitdifferenz (Haversine-basiert) berechnet.
+- Profil-Rendering im Map-Canvas auf modusabhaengige Achsen-/Werteformatierung erweitert.
+
+### Notes
+- Geschwindigkeitsdaten werden als Rohdaten ohne Glaettung dargestellt.
+
 ## 0.1.15 - 2026-07-19
 
 ### Type

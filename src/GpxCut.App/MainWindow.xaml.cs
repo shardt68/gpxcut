@@ -39,11 +39,13 @@ public partial class MainWindow : Window
     private const double HoverToleranceMeters = 35.0;
     private const int FastStepSize = 10;
     private const int MaxProfileSamples = 4_000;
-    private const string ProfileModeTime = "time";
-    private const string ProfileModeDistance = "distance";
+    private const string ProfileModeElevationTime = "elevation-time";
+    private const string ProfileModeElevationDistance = "elevation-distance";
+    private const string ProfileModeSpeedTime = "speed-time";
+    private const string ProfileModeSpeedDistance = "speed-distance";
 
     private bool _isProfileVisible;
-    private string _profileMode = ProfileModeTime;
+    private string _profileMode = ProfileModeElevationTime;
 
     public MainWindow()
         : this(null)
@@ -1069,7 +1071,13 @@ public partial class MainWindow : Window
 
     private string GetSelectedProfileModeFromUi()
     {
-        return ProfileModeComboBox.SelectedIndex == 0 ? ProfileModeTime : ProfileModeDistance;
+        return ProfileModeComboBox.SelectedIndex switch
+        {
+            1 => ProfileModeElevationDistance,
+            2 => ProfileModeSpeedTime,
+            3 => ProfileModeSpeedDistance,
+            _ => ProfileModeElevationTime
+        };
     }
 
     private async Task RefreshProfileAsync()
@@ -1092,11 +1100,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        var rawSamples = BuildProfileSamples();
-        var samples = DownsampleProfileSamples(rawSamples, MaxProfileSamples);
+        var profilePayload = BuildProfilePayload();
+        var samples = DownsampleProfileSamples(profilePayload.Samples, MaxProfileSamples);
         var payloadJson = JsonSerializer.Serialize(new
         {
             mode = _profileMode,
+            xAxis = profilePayload.XAxis,
+            yAxis = profilePayload.YAxis,
+            xLabel = profilePayload.XLabel,
+            yLabel = profilePayload.YLabel,
             points = samples.Select(sample => new { index = sample.Index, x = sample.X, y = sample.Y })
         });
 
@@ -1105,14 +1117,38 @@ public partial class MainWindow : Window
         await ExecuteScriptsAsync(MapScriptFactory.BuildProfileVisibilityScripts(true));
     }
 
-    private List<ProfileSample> BuildProfileSamples()
+    private ProfilePayload BuildProfilePayload()
     {
-        return string.Equals(_profileMode, ProfileModeTime, StringComparison.Ordinal)
-            ? BuildTimeProfileSamples()
-            : BuildDistanceProfileSamples();
+        return _profileMode switch
+        {
+            ProfileModeElevationDistance => new ProfilePayload(
+                BuildElevationDistanceProfileSamples(),
+                "distance",
+                "elevation",
+                "Distance",
+                "Elevation (m)"),
+            ProfileModeSpeedTime => new ProfilePayload(
+                BuildSpeedTimeProfileSamples(),
+                "time",
+                "speed",
+                "Time",
+                "Speed (km/h)"),
+            ProfileModeSpeedDistance => new ProfilePayload(
+                BuildSpeedDistanceProfileSamples(),
+                "distance",
+                "speed",
+                "Distance",
+                "Speed (km/h)"),
+            _ => new ProfilePayload(
+                BuildElevationTimeProfileSamples(),
+                "time",
+                "elevation",
+                "Time",
+                "Elevation (m)")
+        };
     }
 
-    private List<ProfileSample> BuildTimeProfileSamples()
+    private List<ProfileSample> BuildElevationTimeProfileSamples()
     {
         var samples = new List<ProfileSample>(_indexedPoints.Count);
         DateTimeOffset? origin = null;
@@ -1133,7 +1169,7 @@ public partial class MainWindow : Window
         return samples;
     }
 
-    private List<ProfileSample> BuildDistanceProfileSamples()
+    private List<ProfileSample> BuildElevationDistanceProfileSamples()
     {
         var samples = new List<ProfileSample>(_indexedPoints.Count);
         var distanceMeters = 0.0;
@@ -1153,6 +1189,58 @@ public partial class MainWindow : Window
             }
 
             samples.Add(new ProfileSample(index, distanceMeters, current.Elevation.Value));
+        }
+
+        return samples;
+    }
+
+    private List<ProfileSample> BuildSpeedTimeProfileSamples()
+    {
+        var samples = new List<ProfileSample>(_indexedPoints.Count);
+        DateTimeOffset? origin = null;
+
+        for (var index = 1; index < _indexedPoints.Count; index++)
+        {
+            var current = _indexedPoints[index].Point;
+            if (current.Time is not null)
+            {
+                origin ??= current.Time.Value;
+            }
+
+            var speedKmh = TryGetSpeedKmh(index);
+            if (speedKmh is null || current.Time is null || origin is null)
+            {
+                continue;
+            }
+
+            var seconds = (current.Time.Value - origin.Value).TotalSeconds;
+            samples.Add(new ProfileSample(index, seconds, speedKmh.Value));
+        }
+
+        return samples;
+    }
+
+    private List<ProfileSample> BuildSpeedDistanceProfileSamples()
+    {
+        var samples = new List<ProfileSample>(_indexedPoints.Count);
+        var distanceMeters = 0.0;
+
+        for (var index = 0; index < _indexedPoints.Count; index++)
+        {
+            var current = _indexedPoints[index].Point;
+            if (index > 0)
+            {
+                var previous = _indexedPoints[index - 1].Point;
+                distanceMeters += GetDistanceMeters(previous.Latitude, previous.Longitude, current.Latitude, current.Longitude);
+            }
+
+            var speedKmh = TryGetSpeedKmh(index);
+            if (speedKmh is null)
+            {
+                continue;
+            }
+
+            samples.Add(new ProfileSample(index, distanceMeters, speedKmh.Value));
         }
 
         return samples;
@@ -1299,6 +1387,13 @@ public partial class MainWindow : Window
     }
 
     private sealed record ProfileSample(int Index, double X, double Y);
+
+    private sealed record ProfilePayload(
+        List<ProfileSample> Samples,
+        string XAxis,
+        string YAxis,
+        string XLabel,
+        string YLabel);
 
     private sealed record IndexedTrackPoint(int GlobalIndex, int SegmentIndex, int PointIndex, TrackPoint Point);
 }

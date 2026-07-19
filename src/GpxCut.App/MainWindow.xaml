@@ -59,7 +59,7 @@
                       Checked="ShowProfileCheckBox_Checked"
                       Unchecked="ShowProfileCheckBox_Unchecked" />
             <ComboBox x:Name="ProfileModeComboBox"
-                      Width="190"
+                      Width="220"
                       Height="30"
                       Margin="8,0,0,0"
                       VerticalAlignment="Center"
@@ -68,6 +68,8 @@
                       SelectedIndex="0">
                 <ComboBoxItem Content="Height over Time" />
                 <ComboBoxItem Content="Height over Distance" />
+                <ComboBoxItem Content="Speed over Time" />
+                <ComboBoxItem Content="Speed over Distance" />
             </ComboBox>
             <TextBlock x:Name="TrackSummaryTextBlock"
                        Margin="12,0,0,0"

@@ -77,6 +77,10 @@
   let hoverPopup = null;
   let profileVisible = false;
   let profileMode = "time";
+  let profileXAxis = "time";
+  let profileYAxis = "elevation";
+  let profileXLabel = "Time";
+  let profileYLabel = "Elevation (m)";
   let profilePoints = [];
   let profileSelection = {
     startIndex: null,
@@ -343,7 +347,7 @@
   }
 
   function formatProfileX(value) {
-    if (profileMode === "time") {
+    if (profileXAxis === "time") {
       const totalSeconds = Math.max(0, value);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -355,7 +359,19 @@
   }
 
   function profileXTitle() {
-    return profileMode === "time" ? "Time" : "Distance";
+    return profileXLabel;
+  }
+
+  function profileYTitle() {
+    return profileYLabel;
+  }
+
+  function formatProfileY(value) {
+    if (profileYAxis === "speed") {
+      return `${value.toFixed(1)} km/h`;
+    }
+
+    return `${value.toFixed(0)} m`;
   }
 
   function applyProfileVisible(visible) {
@@ -381,6 +397,10 @@
     }
 
     profileMode = payload.mode === "distance" ? "distance" : "time";
+    profileXAxis = payload.xAxis === "distance" ? "distance" : "time";
+    profileYAxis = payload.yAxis === "speed" ? "speed" : "elevation";
+    profileXLabel = typeof payload.xLabel === "string" && payload.xLabel.trim().length > 0 ? payload.xLabel : (profileXAxis === "time" ? "Time" : "Distance");
+    profileYLabel = typeof payload.yLabel === "string" && payload.yLabel.trim().length > 0 ? payload.yLabel : (profileYAxis === "speed" ? "Speed (km/h)" : "Elevation (m)");
     profilePoints = payload.points
       .filter((point) => point && Number.isFinite(point.index) && Number.isFinite(point.x) && Number.isFinite(point.y))
       .map((point) => ({
@@ -591,15 +611,15 @@
 
     profileContext.fillStyle = "#111827";
     profileContext.font = "11px Segoe UI";
-    profileContext.fillText("Elevation (m)", margin.left, margin.top - 2);
+    profileContext.fillText(profileYTitle(), margin.left, margin.top - 2);
     profileContext.fillText(profileXTitle(), width - margin.right - 65, height - 8);
 
     profileContext.fillStyle = "#4b5563";
     profileContext.font = "10px Segoe UI";
     profileContext.fillText(formatProfileX(minX), margin.left, height - 10);
     profileContext.fillText(formatProfileX(maxX), Math.max(margin.left + 30, width - margin.right - 80), height - 10);
-    profileContext.fillText(`${minY.toFixed(0)} m`, 8, height - margin.bottom + 4);
-    profileContext.fillText(`${maxY.toFixed(0)} m`, 8, margin.top + 4);
+    profileContext.fillText(formatProfileY(minY), 8, height - margin.bottom + 4);
+    profileContext.fillText(formatProfileY(maxY), 8, margin.top + 4);
   }
 
   function findNearestSampleByCanvasX(canvasX) {
