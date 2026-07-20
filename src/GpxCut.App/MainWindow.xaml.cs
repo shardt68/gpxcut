@@ -344,17 +344,7 @@ public partial class MainWindow : Window
 
     private async Task RenderTrackAsync(TrackDocument document, bool includeFitBounds)
     {
-        var scripts = MapScriptFactory.BuildRenderScripts(document, includeFitBounds: includeFitBounds).ToList();
-        
-        // Use progressive rendering for large datasets to avoid WebView2 timeouts
-        if (scripts.Count > 20)
-        {
-            await ExecuteScriptsAsyncProgressive(scripts);
-        }
-        else
-        {
-            await ExecuteScriptsAsync(scripts);
-        }
+        await ExecuteScriptsAsync(MapScriptFactory.BuildRenderScripts(document, includeFitBounds: includeFitBounds));
     }
 
     private async Task ExecuteScriptsAsync(IEnumerable<string> scripts)
@@ -364,14 +354,25 @@ public partial class MainWindow : Window
             return;
         }
 
-        foreach (var script in scripts)
+        var scriptsList = scripts as IReadOnlyList<string> ?? scripts.ToList();
+
+        // Use progressive rendering for large script batches to avoid WebView2 timeouts
+        if (scriptsList.Count > 20)
         {
-            await MapWebView.CoreWebView2.ExecuteScriptAsync(script);
+            await ExecuteScriptsAsyncProgressive(scriptsList);
+        }
+        else
+        {
+            foreach (var script in scriptsList)
+            {
+                await MapWebView.CoreWebView2.ExecuteScriptAsync(script);
+            }
         }
     }
 
     /// <summary>
     /// Execute scripts progressively in batches with delays to avoid WebView2 timeouts on large datasets.
+    /// This is automatically triggered when script count exceeds 20.
     /// </summary>
     private async Task ExecuteScriptsAsyncProgressive(IReadOnlyList<string> scripts)
     {
