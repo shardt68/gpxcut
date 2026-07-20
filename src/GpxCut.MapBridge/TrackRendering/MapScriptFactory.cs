@@ -16,6 +16,9 @@ public static class MapScriptFactory
             yield return $"window.gpxcutMap.addTrackChunk({coordinatesJson});";
         }
 
+        // Render the track once after all chunks have been accumulated
+        yield return "window.gpxcutMap.flushTrackChunks();";
+
         var (startPoint, endPoint) = GetStartAndEndPoints(document);
         if (startPoint is not null && endPoint is not null)
         {

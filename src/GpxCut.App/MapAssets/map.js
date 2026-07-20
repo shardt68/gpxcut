@@ -71,6 +71,7 @@
   };
 
   let trackCoordinates = [];
+  let pendingChunks = [];
   let isShiftPressed = false;
   let hoverTimerId = null;
   let hoverRequestToken = 0;
@@ -749,6 +750,7 @@
 
   window.gpxcutMap = {
     clearTrack() {
+      pendingChunks = [];
       setCoordinates([]);
     },
 
@@ -793,7 +795,21 @@
     },
 
     addTrackChunk(chunkCoordinates) {
-      setCoordinates(trackCoordinates.concat(chunkCoordinates));
+      // Accumulate chunks without re-rendering for each one.
+      // Call flushTrackChunks() once all chunks have been added.
+      for (let i = 0; i < chunkCoordinates.length; i++) {
+        pendingChunks.push(chunkCoordinates[i]);
+      }
+    },
+
+    flushTrackChunks() {
+      if (pendingChunks.length === 0) {
+        return;
+      }
+      // Concatenate once and render once
+      const all = trackCoordinates.concat(pendingChunks);
+      pendingChunks = [];
+      setCoordinates(all);
     },
 
     setSelectionCoordinates(selectionCoordinates) {
