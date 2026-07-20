@@ -81,6 +81,12 @@
   let profileYAxis = "elevation";
   let profileXLabel = "Time";
   let profileYLabel = "Elevation (m)";
+  const profileChartMargin = {
+    left: 68,
+    right: 28,
+    top: 20,
+    bottom: 52
+  };
   let profilePoints = [];
   let profileSelection = {
     startIndex: null,
@@ -374,6 +380,20 @@
     return `${value.toFixed(0)} m`;
   }
 
+  function buildTicks(min, max, tickCount = 6) {
+    const ticks = [];
+    if (!Number.isFinite(min) || !Number.isFinite(max) || tickCount < 2) {
+      return ticks;
+    }
+
+    const steps = tickCount - 1;
+    for (let i = 0; i <= steps; i++) {
+      ticks.push(min + ((max - min) * i) / steps);
+    }
+
+    return ticks;
+  }
+
   function applyProfileVisible(visible) {
     profileVisible = !!visible;
     if (!profilePanel) {
@@ -507,12 +527,7 @@
     profileContext.fillStyle = "#f7f7f8";
     profileContext.fillRect(0, 0, width, height);
 
-    const margin = {
-      left: 54,
-      right: 16,
-      top: 14,
-      bottom: 30
-    };
+    const margin = profileChartMargin;
 
     const chartWidth = Math.max(1, width - margin.left - margin.right);
     const chartHeight = Math.max(1, height - margin.top - margin.bottom);
@@ -550,6 +565,28 @@
 
     const toCanvasX = (value) => margin.left + ((value - minX) / (maxX - minX)) * chartWidth;
     const toCanvasY = (value) => margin.top + chartHeight - ((value - minY) / (maxY - minY)) * chartHeight;
+
+    const xTicks = buildTicks(minX, maxX, 7);
+    const yTicks = buildTicks(minY, maxY, 6);
+
+    profileContext.strokeStyle = "#e5e7eb";
+    profileContext.lineWidth = 1;
+
+    for (const yTick of yTicks) {
+      const y = toCanvasY(yTick);
+      profileContext.beginPath();
+      profileContext.moveTo(margin.left, y);
+      profileContext.lineTo(margin.left + chartWidth, y);
+      profileContext.stroke();
+    }
+
+    for (const xTick of xTicks) {
+      const x = toCanvasX(xTick);
+      profileContext.beginPath();
+      profileContext.moveTo(x, margin.top);
+      profileContext.lineTo(x, margin.top + chartHeight);
+      profileContext.stroke();
+    }
 
     const selection = resolveSelectionRange();
     if (selection) {
@@ -612,14 +649,38 @@
     profileContext.fillStyle = "#111827";
     profileContext.font = "11px Segoe UI";
     profileContext.fillText(profileYTitle(), margin.left, margin.top - 2);
-    profileContext.fillText(profileXTitle(), width - margin.right - 65, height - 8);
+
+    profileContext.textAlign = "center";
+    profileContext.fillText(profileXTitle(), margin.left + chartWidth / 2, height - 8);
 
     profileContext.fillStyle = "#4b5563";
     profileContext.font = "10px Segoe UI";
-    profileContext.fillText(formatProfileX(minX), margin.left, height - 10);
-    profileContext.fillText(formatProfileX(maxX), Math.max(margin.left + 30, width - margin.right - 80), height - 10);
-    profileContext.fillText(formatProfileY(minY), 8, height - margin.bottom + 4);
-    profileContext.fillText(formatProfileY(maxY), 8, margin.top + 4);
+    profileContext.textBaseline = "middle";
+
+    for (let i = 0; i < yTicks.length; i++) {
+      const yTick = yTicks[i];
+      const y = toCanvasY(yTick);
+      profileContext.textAlign = "right";
+      profileContext.fillText(formatProfileY(yTick), margin.left - 8, y);
+    }
+
+    profileContext.textBaseline = "alphabetic";
+    for (let i = 0; i < xTicks.length; i++) {
+      const xTick = xTicks[i];
+      const x = toCanvasX(xTick);
+
+      if (i === 0) {
+        profileContext.textAlign = "left";
+      } else if (i === xTicks.length - 1) {
+        profileContext.textAlign = "right";
+      } else {
+        profileContext.textAlign = "center";
+      }
+
+      profileContext.fillText(formatProfileX(xTick), x, margin.top + chartHeight + 16);
+    }
+
+    profileContext.textAlign = "left";
   }
 
   function findNearestSampleByCanvasX(canvasX) {
@@ -629,8 +690,8 @@
 
     const width = profileCanvas.clientWidth;
     const margin = {
-      left: 54,
-      right: 16
+      left: profileChartMargin.left,
+      right: profileChartMargin.right
     };
     const chartWidth = Math.max(1, width - margin.left - margin.right);
 

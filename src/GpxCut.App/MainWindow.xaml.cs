@@ -344,7 +344,17 @@ public partial class MainWindow : Window
 
     private async Task RenderTrackAsync(TrackDocument document, bool includeFitBounds)
     {
-        await ExecuteScriptsAsync(MapScriptFactory.BuildRenderScripts(document, includeFitBounds: includeFitBounds));
+        var scripts = MapScriptFactory.BuildRenderScripts(document, includeFitBounds: includeFitBounds).ToList();
+        
+        // Use progressive rendering for large datasets to avoid WebView2 timeouts
+        if (scripts.Count > 20)
+        {
+            await ExecuteScriptsAsyncProgressive(scripts);
+        }
+        else
+        {
+            await ExecuteScriptsAsync(scripts);
+        }
     }
 
     private async Task ExecuteScriptsAsync(IEnumerable<string> scripts)
@@ -357,6 +367,36 @@ public partial class MainWindow : Window
         foreach (var script in scripts)
         {
             await MapWebView.CoreWebView2.ExecuteScriptAsync(script);
+        }
+    }
+
+    /// <summary>
+    /// Execute scripts progressively in batches with delays to avoid WebView2 timeouts on large datasets.
+    /// </summary>
+    private async Task ExecuteScriptsAsyncProgressive(IReadOnlyList<string> scripts)
+    {
+        if (MapWebView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        const int chunkSize = 10; // Execute 10 scripts per batch
+        const int delayMs = 10;   // 10ms delay between batches for WebView2 to process
+
+        for (int i = 0; i < scripts.Count; i += chunkSize)
+        {
+            var batch = scripts.Skip(i).Take(chunkSize);
+            
+            foreach (var script in batch)
+            {
+                await MapWebView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+
+            // Add delay between batches if there are more scripts
+            if (i + chunkSize < scripts.Count)
+            {
+                await Task.Delay(delayMs);
+            }
         }
     }
 
