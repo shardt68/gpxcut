@@ -13,6 +13,7 @@ using Microsoft.Web.WebView2.Core;
 using System.Windows.Threading;
 using System.Windows.Input;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace GpxCut.App;
 
@@ -53,6 +54,7 @@ public partial class MainWindow : Window
     private bool _isUpdatingBasemapSelection;
     private string? _activeBasemapId;
     private string? _activeWebViewUserDataFolder;
+    private ContextMenu? _basemapContextMenu;
     private readonly AppSettings _appSettings = LoadAppSettings();
 
     public MainWindow()
@@ -307,7 +309,14 @@ public partial class MainWindow : Window
             CacheMode: string.IsNullOrWhiteSpace(entry.CacheMode) ? "unknown" : entry.CacheMode,
             MinTtlDays: entry.MinTtlDays,
             OfflinePrefetchAllowed: entry.OfflinePrefetchAllowed,
-            Notes: entry.Notes);
+            Notes: entry.Notes,
+            Bounds: entry.Map?.Bounds is null
+                ? null
+                : new BasemapBounds(
+                    entry.Map.Bounds.MinLon,
+                    entry.Map.Bounds.MinLat,
+                    entry.Map.Bounds.MaxLon,
+                    entry.Map.Bounds.MaxLat));
     }
 
     private static LayerPolicyState CreateFallbackLayerPolicyState()
@@ -392,7 +401,8 @@ public partial class MainWindow : Window
             CacheMode: "http-headers",
             MinTtlDays: 7,
             OfflinePrefetchAllowed: false,
-            Notes: "Interactive use only on tile.openstreetmap.org. No bulk prefetch/offline seeding.");
+            Notes: "Interactive use only on tile.openstreetmap.org. No bulk prefetch/offline seeding.",
+            Bounds: null);
     }
 
     private static string? ResolveLayerPoliciesPath(string mapFilePath)
@@ -465,6 +475,25 @@ public partial class MainWindow : Window
             }
 
             var messageType = typeNode.GetString();
+
+            if (string.Equals(messageType, "map-empty-contextmenu", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!root.TryGetProperty("x", out var xNode) || xNode.ValueKind != JsonValueKind.Number
+                    || !root.TryGetProperty("y", out var yNode) || yNode.ValueKind != JsonValueKind.Number)
+                {
+                    return;
+                }
+
+                var contextLongitude = root.TryGetProperty("lng", out var contextLngNode) && contextLngNode.ValueKind == JsonValueKind.Number
+                    ? contextLngNode.GetDouble()
+                    : (double?)null;
+                var contextLatitude = root.TryGetProperty("lat", out var contextLatNode) && contextLatNode.ValueKind == JsonValueKind.Number
+                    ? contextLatNode.GetDouble()
+                    : (double?)null;
+
+                ShowBasemapContextMenu(xNode.GetDouble(), yNode.GetDouble(), contextLongitude, contextLatitude);
+                return;
+            }
 
             if (string.Equals(messageType, "map-hover-clear", StringComparison.OrdinalIgnoreCase))
             {
@@ -1083,7 +1112,90 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!item.Basemap.CacheAllowed)
+        await TryApplyBasemapSelectionAsync(item.Basemap, item.Name);
+    }
+
+    private void ShowBasemapContextMenu(double x, double y, double? longitude, double? latitude)
+    {
+        if (!_isMapReady || _isBusy)
+        {
+            return;
+        }
+
+        _basemapContextMenu?.SetCurrentValue(ContextMenu.IsOpenProperty, false);
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = MapWebView,
+            Placement = PlacementMode.RelativePoint,
+            HorizontalOffset = x,
+            VerticalOffset = y
+        };
+
+        var availableAtPoint = _layerPolicyState.AvailableBasemaps
+            .Where(basemap => IsBasemapAvailableAtPoint(basemap, longitude, latitude))
+            .ToList();
+
+        foreach (var basemap in availableAtPoint)
+        {
+            var isActive = string.Equals(basemap.Id, _activeBasemapId, StringComparison.OrdinalIgnoreCase);
+            var menuItem = new MenuItem
+            {
+                Header = isActive ? $"{basemap.Name} (active)" : basemap.Name,
+                IsEnabled = !isActive
+            };
+
+            var selectedBasemap = basemap;
+            menuItem.Click += async (_, _) =>
+            {
+                await TryApplyBasemapSelectionAsync(selectedBasemap, selectedBasemap.Name);
+            };
+
+            menu.Items.Add(menuItem);
+        }
+
+        if (menu.Items.Count == 0)
+        {
+            menu.Items.Add(new MenuItem
+            {
+                Header = "No basemaps available",
+                IsEnabled = false
+            });
+        }
+
+        menu.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_basemapContextMenu, menu))
+            {
+                _basemapContextMenu = null;
+            }
+        };
+
+        _basemapContextMenu = menu;
+        menu.IsOpen = true;
+    }
+
+    private static bool IsBasemapAvailableAtPoint(BasemapLayerConfig basemap, double? longitude, double? latitude)
+    {
+        if (basemap.Bounds is null || longitude is null || latitude is null)
+        {
+            return true;
+        }
+
+        return longitude.Value >= basemap.Bounds.MinLon
+            && longitude.Value <= basemap.Bounds.MaxLon
+            && latitude.Value >= basemap.Bounds.MinLat
+            && latitude.Value <= basemap.Bounds.MaxLat;
+    }
+
+    private async Task<bool> TryApplyBasemapSelectionAsync(BasemapLayerConfig basemap, string displayName)
+    {
+        if (string.Equals(basemap.Id, _activeBasemapId, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!basemap.CacheAllowed)
         {
             var confirm = MessageBox.Show(
                 this,
@@ -1096,20 +1208,48 @@ public partial class MainWindow : Window
             {
                 RevertBasemapSelection();
                 SetStatus("Basemap change canceled by policy confirmation.");
-                return;
+                return false;
             }
         }
 
         try
         {
-            await ApplyBasemapAsync(item.Basemap);
-            var cacheLabel = item.Basemap.CacheAllowed ? item.Basemap.CacheMode : "disallowed";
-            SetStatus($"Basemap switched to '{item.Name}' (cache: {cacheLabel}, offline prefetch: {(item.Basemap.OfflinePrefetchAllowed ? "allowed" : "not allowed")}).");
+            await ApplyBasemapAsync(basemap);
+            SyncBasemapComboSelection(basemap.Id);
+            var cacheLabel = basemap.CacheAllowed ? basemap.CacheMode : "disallowed";
+            SetStatus($"Basemap switched to '{displayName}' (cache: {cacheLabel}, offline prefetch: {(basemap.OfflinePrefetchAllowed ? "allowed" : "not allowed")}).");
+            return true;
         }
         catch (Exception ex)
         {
-            LogError("MAP_BASEMAP_SWITCH", ex, item.Id);
+            LogError("MAP_BASEMAP_SWITCH", ex, basemap.Id);
             SetStatus($"Basemap switch failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private void SyncBasemapComboSelection(string basemapId)
+    {
+        if (BasemapComboBox.ItemsSource is not IEnumerable<BasemapComboItem> items)
+        {
+            return;
+        }
+
+        var selected = items.FirstOrDefault(item =>
+            string.Equals(item.Id, basemapId, StringComparison.OrdinalIgnoreCase));
+        if (selected is null)
+        {
+            return;
+        }
+
+        _isUpdatingBasemapSelection = true;
+        try
+        {
+            BasemapComboBox.SelectedItem = selected;
+        }
+        finally
+        {
+            _isUpdatingBasemapSelection = false;
         }
     }
 
@@ -1863,7 +2003,10 @@ public partial class MainWindow : Window
         string CacheMode,
         int? MinTtlDays,
         bool OfflinePrefetchAllowed,
-        string? Notes);
+        string? Notes,
+        BasemapBounds? Bounds);
+
+    private sealed record BasemapBounds(double MinLon, double MinLat, double MaxLon, double MaxLat);
 
     private sealed record LayerPolicyState(
         BasemapLayerConfig EffectiveBasemap,
@@ -1928,6 +2071,19 @@ public partial class MainWindow : Window
         public int? MinZoom { get; set; }
 
         public int? MaxZoom { get; set; }
+
+        public LayerPolicyBounds? Bounds { get; set; }
+    }
+
+    private sealed class LayerPolicyBounds
+    {
+        public double MinLon { get; set; }
+
+        public double MinLat { get; set; }
+
+        public double MaxLon { get; set; }
+
+        public double MaxLat { get; set; }
     }
 
     private sealed class AppSettings

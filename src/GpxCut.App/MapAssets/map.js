@@ -233,11 +233,24 @@
     top: 20,
     bottom: 52
   };
+  const selectableLayers = ["track-line", "selection-line", "selection-marker-start", "selection-marker-end"];
   let profilePoints = [];
   let profileSelection = {
     startIndex: null,
     endIndex: null
   };
+
+  function isNearSelectableGeometry(point) {
+    const hitFeatures = map.queryRenderedFeatures(
+      [
+        [point.x - cursorProximityPixels, point.y - cursorProximityPixels],
+        [point.x + cursorProximityPixels, point.y + cursorProximityPixels]
+      ],
+      { layers: selectableLayers }
+    );
+
+    return hitFeatures.length > 0;
+  }
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Shift") {
@@ -1103,6 +1116,17 @@
       event.originalEvent.preventDefault();
     }
 
+    if (!isNearSelectableGeometry(event.point)) {
+      window.chrome.webview.postMessage({
+        type: "map-empty-contextmenu",
+        x: event.point.x,
+        y: event.point.y,
+        lng: event.lngLat.lng,
+        lat: event.lngLat.lat
+      });
+      return;
+    }
+
     window.chrome.webview.postMessage({
       type: "map-click",
       lng: event.lngLat.lng,
@@ -1113,18 +1137,10 @@
   });
 
   map.on("mousemove", (event) => {
-    const hitFeatures = map.queryRenderedFeatures(
-      [
-        [event.point.x - cursorProximityPixels, event.point.y - cursorProximityPixels],
-        [event.point.x + cursorProximityPixels, event.point.y + cursorProximityPixels]
-      ],
-      {
-        layers: ["track-line", "selection-line", "selection-marker-start", "selection-marker-end"]
-      }
-    );
+    const nearSelectableGeometry = isNearSelectableGeometry(event.point);
 
     // Near selectable geometry show arrow cursor; elsewhere keep pan-hand cursor.
-    if (hitFeatures.length > 0) {
+    if (nearSelectableGeometry) {
       map.getCanvas().style.cursor = "default";
       scheduleHoverRequest(event);
       return;

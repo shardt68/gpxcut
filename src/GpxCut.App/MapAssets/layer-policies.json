@@ -67,7 +67,13 @@
         "tiles": [
           "https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.5,
+          "minLat": 47.0,
+          "maxLon": 15.6,
+          "maxLat": 55.2
+        }
       }
     },
     {
@@ -89,7 +95,13 @@
         "tiles": [
           "https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_grau/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.5,
+          "minLat": 47.0,
+          "maxLon": 15.6,
+          "maxLat": 55.2
+        }
       }
     },
     {
@@ -111,7 +123,13 @@
         "tiles": [
           "https://sgx.geodatenzentrum.de/wmts_basemapde_schummerung/tile/1.0.0/de_basemapde_web_raster_hillshade/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.5,
+          "minLat": 47.0,
+          "maxLon": 15.6,
+          "maxLat": 55.2
+        }
       }
     },
     {
@@ -136,7 +154,13 @@
         "tileSize": 256,
         "wmtsZoomOffset": -5,
         "minZoom": 5,
-        "maxZoom": 21
+        "maxZoom": 21,
+        "bounds": {
+          "minLon": 5.8,
+          "minLat": 50.2,
+          "maxLon": 9.6,
+          "maxLat": 52.6
+        }
       }
     },
     {
@@ -158,7 +182,13 @@
         "tiles": [
           "https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=bebb_dop20c&STYLES=&FORMAT=image/png&TRANSPARENT=FALSE&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 11.2,
+          "minLat": 51.3,
+          "maxLon": 14.8,
+          "maxLat": 53.6
+        }
       }
     },
     {
@@ -180,7 +210,13 @@
         "tiles": [
           "https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=sn_dop_020&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 11.8,
+          "minLat": 50.1,
+          "maxLon": 15.1,
+          "maxLat": 51.7
+        }
       }
     },
     {
@@ -202,7 +238,13 @@
         "tiles": [
           "https://www.geoproxy.geoportal-th.de/geoproxy/services?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=th_dop&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 9.8,
+          "minLat": 50.1,
+          "maxLon": 12.8,
+          "maxLat": 51.7
+        }
       }
     },
     {
@@ -224,7 +266,13 @@
         "tiles": [
           "https://www.geodaten-mv.de/dienste/adv_dop?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=mv_dop&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 10.4,
+          "minLat": 53.0,
+          "maxLon": 14.6,
+          "maxLat": 54.9
+        }
       }
     },
     {
@@ -246,7 +294,13 @@
         "tiles": [
           "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP20_OpenData/guest?SERVICE=WMS&REQUEST=GetCapabilities"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 10.5,
+          "minLat": 50.9,
+          "maxLon": 13.2,
+          "maxLat": 53.1
+        }
       }
     },
     {
@@ -268,7 +322,13 @@
         "tiles": [
           "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": -171.0,
+          "minLat": 18.0,
+          "maxLon": -66.0,
+          "maxLat": 72.0
+        }
       }
     },
     {
@@ -290,7 +350,13 @@
         "tiles": [
           "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}"
         ],
-        "tileSize": 256
+        "tileSize": 256,
+        "bounds": {
+          "minLon": -171.0,
+          "minLat": 18.0,
+          "maxLon": -66.0,
+          "maxLat": 72.0
+        }
       }
     }
   ]
