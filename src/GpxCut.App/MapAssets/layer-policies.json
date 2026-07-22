@@ -696,6 +696,146 @@
       }
     },
     {
+      "id": "niedersachsen-dop20-wms",
+      "name": "Niedersachsen DOP20 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LGLN Niedersachsen",
+      "licenseName": "Open geodata terms by LGLN Niedersachsen (verify per service metadata)",
+      "licenseUrl": "https://www.lgln.niedersachsen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified OpenData WMS GetMap endpoint for Niedersachsen orthophoto layer ni_dop20.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://opendata.lgln.niedersachsen.de/doorman/noauth/dop_wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=ni_dop20&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 6.5,
+          "minLat": 51.2,
+          "maxLon": 11.8,
+          "maxLat": 54.2
+        }
+      }
+    },
+    {
+      "id": "niedersachsen-dtk25-wms",
+      "name": "Niedersachsen DTK25 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LGLN Niedersachsen",
+      "licenseName": "Open geodata terms by LGLN Niedersachsen (verify per service metadata)",
+      "licenseUrl": "https://www.lgln.niedersachsen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified OpenData WMS GetMap endpoint for Niedersachsen topographic map layer ni_dtk25_farbe.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://opendata.lgln.niedersachsen.de/doorman/noauth/dtk25_wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=ni_dtk25_farbe&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 6.5,
+          "minLat": 51.2,
+          "maxLon": 11.8,
+          "maxLat": 54.2
+        }
+      }
+    },
+    {
+      "id": "schleswig-holstein-dop20-wms",
+      "name": "Schleswig-Holstein DOP20 Color (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LVermGeo SH",
+      "licenseName": "Open geodata terms by Schleswig-Holstein (verify per service metadata)",
+      "licenseUrl": "https://opendata.schleswig-holstein.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Schleswig-Holstein orthophoto layer sh_dop20_rgb.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://dienste.gdi-sh.de/WMS_SH_DOP20col_OpenGBD?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=sh_dop20_rgb&STYLES=&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.0,
+          "minLat": 53.3,
+          "maxLon": 11.4,
+          "maxLat": 55.1
+        }
+      }
+    },
+    {
+      "id": "schleswig-holstein-dtk25-wms",
+      "name": "Schleswig-Holstein DTK25 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LVermGeo SH",
+      "licenseName": "Open geodata terms by Schleswig-Holstein (verify per service metadata)",
+      "licenseUrl": "https://opendata.schleswig-holstein.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Schleswig-Holstein topographic map layer sh_dtk25_col.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://service.gdi-sh.de/WMS_SH_DTK25_OpenGBD?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=sh_dtk25_col&STYLES=default&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.0,
+          "minLat": 53.3,
+          "maxLon": 11.4,
+          "maxLat": 55.1
+        }
+      }
+    },
+    {
+      "id": "hamburg-dop-zeitreihe-wms",
+      "name": "Hamburg DOP Zeitreihe Belaubt (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Freie und Hansestadt Hamburg",
+      "licenseName": "Open geodata terms by Hamburg (verify per service metadata)",
+      "licenseUrl": "https://suche.transparenz.hamburg.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Hamburg orthophoto time series layer dop_zeitreihe_belaubt.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geodienste.hamburg.de/wms_dop_zeitreihe_belaubt?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=dop_zeitreihe_belaubt&STYLES=&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 9.5,
+          "minLat": 53.4,
+          "maxLon": 10.4,
+          "maxLat": 53.9
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
