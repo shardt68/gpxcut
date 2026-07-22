@@ -1042,6 +1042,62 @@
       }
     },
     {
+      "id": "czechia-cuzk-ztm-wm",
+      "name": "Czechia ZTM Topo (CZ)",
+      "enabledByDefault": false,
+      "attribution": "© ČÚZK",
+      "licenseName": "Open data terms by ČÚZK (verify per service metadata)",
+      "licenseUrl": "https://geoportal.cuzk.cz/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Czech topographic map in Web Mercator via tiled ArcGIS endpoint.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://ags.cuzk.cz/arcgis1/rest/services/ZTM_WM/MapServer/tile/{z}/{y}/{x}"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 12.0,
+          "minLat": 48.5,
+          "maxLon": 18.9,
+          "maxLat": 51.1
+        }
+      }
+    },
+    {
+      "id": "czechia-cuzk-ortofoto-wm",
+      "name": "Czechia Ortofoto (CZ)",
+      "enabledByDefault": false,
+      "attribution": "© ČÚZK",
+      "licenseName": "Open data terms by ČÚZK (verify per service metadata)",
+      "licenseUrl": "https://geoportal.cuzk.cz/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Czech orthophoto map in Web Mercator via tiled ArcGIS endpoint.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://ags.cuzk.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 12.0,
+          "minLat": 48.5,
+          "maxLon": 18.9,
+          "maxLat": 51.1
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
