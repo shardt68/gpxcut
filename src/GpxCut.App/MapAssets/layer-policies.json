@@ -640,6 +640,62 @@
       }
     },
     {
+      "id": "bayern-dop20-wms",
+      "name": "Bayern DOP20 RGB (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Bayerische Vermessungsverwaltung, CC BY 4.0",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://www.geodaten.bayern.de/odd/m/3/html/nutzungsbedingungen.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified OpenData WMS GetMap endpoint for Bavaria orthophoto layer dop20.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geoservices.bayern.de/od/wms/grid/v1/opendatagrid?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=dop20&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.9,
+          "minLat": 47.2,
+          "maxLon": 13.9,
+          "maxLat": 50.6
+        }
+      }
+    },
+    {
+      "id": "bayern-topo-wmts",
+      "name": "Bayern Topographische Karten (WMTS)",
+      "enabledByDefault": false,
+      "attribution": "© Bayerische Vermessungsverwaltung, CC BY 4.0",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://www.geodaten.bayern.de/odd/m/3/html/nutzungsbedingungen.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified OpenData WMTS topographic layer by_amtl_karte via BayernWolke tile template.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://wmtsod1.bayernwolke.de/wmts/by_amtl_karte/smerc/{z}/{x}/{y}"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.9,
+          "minLat": 47.2,
+          "maxLon": 13.9,
+          "maxLat": 50.6
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
