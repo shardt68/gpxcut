@@ -1006,13 +1006,26 @@ public partial class MainWindow : Window
         var sourceId = root.TryGetProperty("sourceId", out var sourceNode)
             ? sourceNode.GetString() ?? ""
             : string.Empty;
+        var basemapId = root.TryGetProperty("basemapId", out var basemapNode)
+            ? basemapNode.GetString() ?? ""
+            : string.Empty;
         var zoomText = root.TryGetProperty("zoom", out var zoomNode) && zoomNode.ValueKind == JsonValueKind.Number
             ? zoomNode.GetDouble().ToString("0.00", CultureInfo.InvariantCulture)
             : "n/a";
 
+        if (string.Equals(category, "tile-zoom", StringComparison.OrdinalIgnoreCase))
+        {
+            var serverZoomText = root.TryGetProperty("serverZoom", out var serverZoomNode) && serverZoomNode.ValueKind == JsonValueKind.Number
+                ? serverZoomNode.GetDouble().ToString("0", CultureInfo.InvariantCulture)
+                : "n/a";
+            var basemapText = string.IsNullOrWhiteSpace(basemapId) ? "n/a" : basemapId;
+            BasemapZoomTextBlock.Text = $"Basemap zoom: map={zoomText}, server={serverZoomText}, id={basemapText}";
+            return;
+        }
+
         if (string.Equals(category, "tile-error", StringComparison.OrdinalIgnoreCase))
         {
-            LogError("MAP_TILE", null, $"source={sourceId} zoom={zoomText} message={message}");
+            LogError("MAP_TILE", null, $"basemap={basemapId} source={sourceId} zoom={zoomText} message={message}");
             return;
         }
 

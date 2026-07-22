@@ -1210,6 +1210,65 @@
       }
     },
     {
+      "id": "latvia-topo-pamatkarte-wms",
+      "name": "Latvia Topographic Map (LV, fallback)",
+      "enabledByDefault": false,
+      "attribution": "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © OpenTopoMap (CC-BY-SA)",
+      "licenseName": "CC BY-SA 3.0 (Map style) + OSM attribution",
+      "licenseUrl": "https://www.opentopomap.org/about",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Fallback topo layer for Latvia area. Official LGIA topo tile services tested in this integration returned non-usable output or access restrictions.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 20.9,
+          "minLat": 55.6,
+          "maxLon": 28.3,
+          "maxLat": 58.1
+        }
+      }
+    },
+    {
+      "id": "latvia-ortho-ortofoto3-wms",
+      "name": "Latvia Orthophoto (DOP) (LV, fallback)",
+      "enabledByDefault": false,
+      "attribution": "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      "licenseName": "Esri Terms of Use (with attribution)",
+      "licenseUrl": "https://www.esri.com/en-us/legal/terms/full-master-agreement",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Fallback orthophoto for Latvia. LGIA OPEN_DATA orthophoto endpoint repeatedly triggered decode errors in WebView2 runtime logs.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        ],
+        "tileSize": 256,
+        "maxZoom": 20,
+        "bounds": {
+          "minLon": 20.9,
+          "minLat": 55.6,
+          "maxLon": 28.3,
+          "maxLat": 58.1
+        }
+      }
+    },
+    {
       "id": "estonia-topo-baaskaart-wms",
       "name": "Estonia Basic/Topographic Map (EE)",
       "enabledByDefault": false,

@@ -117,6 +117,12 @@
             <StatusBarItem>
                 <TextBlock x:Name="StatusTextBlock" Text="Ready." />
             </StatusBarItem>
+            <Separator />
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock x:Name="BasemapZoomTextBlock"
+                           Text="Basemap zoom: n/a"
+                           ToolTip="Aktueller Kartenzoom und die vom Server geladene Tile-Zoomstufe" />
+            </StatusBarItem>
         </StatusBar>
     </Grid>
 </Window>

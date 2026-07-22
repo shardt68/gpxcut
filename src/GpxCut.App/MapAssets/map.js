@@ -12,6 +12,8 @@
   };
   const wmsProbeBboxEpsg3857 = "1113194.9079327357,7044436.526761846,1175452.1635191638,7106693.782348276";
   let basemapApplyToken = 0;
+  let lastTileZoomDiagnosticKey = "";
+  let lastTileZoomDiagnosticAt = 0;
 
   function normalizeBasemapBounds(candidateBounds) {
     if (!candidateBounds || typeof candidateBounds !== "object") {
@@ -49,7 +51,7 @@
     }
 
     const id = config.id.toLowerCase();
-    return id.startsWith("hessen-") || id.startsWith("baden-wuerttemberg-");
+    return id.startsWith("hessen-") || id.startsWith("baden-wuerttemberg-") || id.startsWith("latvia-");
   }
 
   function clamp(value, min, max) {
@@ -278,6 +280,43 @@
     });
   }
 
+  function extractServerTileZoom(url) {
+    if (typeof url !== "string" || url.length === 0) {
+      return null;
+    }
+
+    const match = url.match(/\/(\d+)\/(\d+)\/(\d+)(?:\.[a-zA-Z0-9]+)?(?:\?|$)/);
+    if (!match) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(match[1], 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function reportTileZoom(url) {
+    const mapZoom = map.getZoom();
+    const serverZoom = extractServerTileZoom(url);
+    const mapZoomRounded = Math.round(mapZoom * 100) / 100;
+    const key = `${activeBasemap?.id ?? "n/a"}|${mapZoomRounded}|${serverZoom ?? "n/a"}`;
+    const now = Date.now();
+
+    // Throttle diagnostics to avoid flooding the host app while panning/zooming.
+    if (key === lastTileZoomDiagnosticKey && now - lastTileZoomDiagnosticAt < 1000) {
+      return;
+    }
+
+    lastTileZoomDiagnosticKey = key;
+    lastTileZoomDiagnosticAt = now;
+
+    postMapDiagnostic({
+      category: "tile-zoom",
+      basemapId: activeBasemap?.id,
+      zoom: mapZoom,
+      serverZoom
+    });
+  }
+
   function applyViewportConstraints(config, jumpIntoConstraints) {
     const shouldClamp = shouldConstrainToBasemapBounds(config);
 
@@ -397,8 +436,10 @@
     transformRequest: (url, resourceType) => {
       if (resourceType === "Tile") {
         const bwDopUrl = rewriteBwDopTileUrl(url, activeBasemap);
+        const effectiveUrl = rewriteWmtsTileUrl(bwDopUrl, activeBasemap);
+        reportTileZoom(effectiveUrl);
         return {
-          url: rewriteWmtsTileUrl(bwDopUrl, activeBasemap)
+          url: effectiveUrl
         };
       }
 
