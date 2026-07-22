@@ -19,6 +19,7 @@ Example:
 ## Available Skills
 
 - **gpxcut-track-editing/** - GPX track manipulation, metadata preservation, rendering strategy
+- **gpxcut-map-source-access/** - Access patterns and integration workflow for map data sources (XYZ, WMTS-derived, WMS, ArcGIS REST)
 
 ## Validation
 
