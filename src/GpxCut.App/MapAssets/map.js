@@ -10,6 +10,53 @@
     tileSize: 256,
     attribution: "&copy; OpenStreetMap contributors"
   };
+  const wmsProbeBboxEpsg3857 = "1113194.9079327357,7044436.526761846,1175452.1635191638,7106693.782348276";
+  let basemapApplyToken = 0;
+
+  function normalizeBasemapBounds(candidateBounds) {
+    if (!candidateBounds || typeof candidateBounds !== "object") {
+      return undefined;
+    }
+
+    const minLon = candidateBounds.minLon ?? candidateBounds.MinLon;
+    const minLat = candidateBounds.minLat ?? candidateBounds.MinLat;
+    const maxLon = candidateBounds.maxLon ?? candidateBounds.MaxLon;
+    const maxLat = candidateBounds.maxLat ?? candidateBounds.MaxLat;
+
+    if (!Number.isFinite(minLon) || !Number.isFinite(minLat) || !Number.isFinite(maxLon) || !Number.isFinite(maxLat)) {
+      return undefined;
+    }
+
+    if (minLon >= maxLon || minLat >= maxLat) {
+      return undefined;
+    }
+
+    return {
+      minLon,
+      minLat,
+      maxLon,
+      maxLat
+    };
+  }
+
+  function isHessenBasemap(config) {
+    return typeof config?.id === "string" && config.id.toLowerCase().startsWith("hessen-");
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function toMapMaxBounds(bounds) {
+    if (!bounds) {
+      return null;
+    }
+
+    return [
+      [bounds.minLon, bounds.minLat],
+      [bounds.maxLon, bounds.maxLat]
+    ];
+  }
 
   function normalizeBasemapConfig(candidate) {
     if (!candidate || typeof candidate !== "object") {
@@ -40,6 +87,7 @@
     const candidateWmtsZoomOffset = candidate.wmtsZoomOffset ?? candidate.WmtsZoomOffset;
     const candidateMinZoom = candidate.minZoom ?? candidate.MinZoom;
     const candidateMaxZoom = candidate.maxZoom ?? candidate.MaxZoom;
+    const candidateBounds = candidate.bounds ?? candidate.Bounds;
 
     const tileSize = Number.isFinite(candidateTileSize) ? candidateTileSize : 256;
     const attribution = typeof candidateAttribution === "string"
@@ -48,6 +96,7 @@
     const wmtsZoomOffset = Number.isFinite(candidateWmtsZoomOffset) ? candidateWmtsZoomOffset : 0;
     const minZoom = Number.isFinite(candidateMinZoom) ? candidateMinZoom : undefined;
     const maxZoom = Number.isFinite(candidateMaxZoom) ? candidateMaxZoom : undefined;
+    const bounds = normalizeBasemapBounds(candidateBounds);
 
     return {
       id: typeof candidateId === "string" ? candidateId : fallbackBasemap.id,
@@ -58,7 +107,8 @@
       attribution,
       wmtsZoomOffset,
       minZoom,
-      maxZoom
+      maxZoom,
+      bounds
     };
   }
 
@@ -115,11 +165,133 @@
     );
   }
 
-  function applyBasemap(config) {
+  async function probeWmsTemplate(template) {
+    const probeUrl = template.replace("{bbox-epsg-3857}", wmsProbeBboxEpsg3857);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 2500);
+
+    try {
+      const response = await fetch(probeUrl, {
+        method: "GET",
+        cache: "no-store",
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+      return contentType.startsWith("image/");
+    } catch {
+      return false;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  async function resolveBasemapTiles(config) {
+    if (!config || config.type !== "wms" || !Array.isArray(config.tiles) || config.tiles.length <= 1) {
+      return config.tiles;
+    }
+
+    for (const template of config.tiles) {
+      if (typeof template !== "string" || !template.includes("{bbox-epsg-3857}")) {
+        continue;
+      }
+
+      // For WMS templates with yearly layer names, pick the first template that really serves images.
+      // This avoids blank maps when one year disappears and a fallback year is available.
+      if (await probeWmsTemplate(template)) {
+        return [template];
+      }
+    }
+
+    return [config.tiles[0]];
+  }
+
+  function postMapDiagnostic(payload) {
+    if (!window.chrome?.webview || !payload || typeof payload !== "object") {
+      return;
+    }
+
+    window.chrome.webview.postMessage({
+      type: "map-diagnostic",
+      ...payload
+    });
+  }
+
+  function applyViewportConstraints(config, jumpIntoConstraints) {
+    const useHessenLock = isHessenBasemap(config);
+
+    if (!useHessenLock) {
+      map.setMinZoom(0);
+      map.setMaxZoom(22);
+      map.setMaxBounds(null);
+      return;
+    }
+
+    const minZoom = Number.isFinite(config.minZoom) ? config.minZoom : 0;
+    const maxZoom = Number.isFinite(config.maxZoom) ? config.maxZoom : 22;
+    const maxBounds = toMapMaxBounds(config.bounds);
+
+    map.setMinZoom(minZoom);
+    map.setMaxZoom(maxZoom);
+    map.setMaxBounds(maxBounds);
+
+    if (!jumpIntoConstraints) {
+      return;
+    }
+
+    const zoom = map.getZoom();
+    const targetZoom = clamp(zoom, minZoom, maxZoom);
+
+    let center = map.getCenter();
+    let targetLon = center.lng;
+    let targetLat = center.lat;
+
+    if (config.bounds) {
+      targetLon = clamp(targetLon, config.bounds.minLon, config.bounds.maxLon);
+      targetLat = clamp(targetLat, config.bounds.minLat, config.bounds.maxLat);
+    }
+
+    const zoomChanged = Math.abs(targetZoom - zoom) > 1e-9;
+    const centerChanged = Math.abs(targetLon - center.lng) > 1e-9 || Math.abs(targetLat - center.lat) > 1e-9;
+    if (!zoomChanged && !centerChanged) {
+      return;
+    }
+
+    map.easeTo({
+      center: [targetLon, targetLat],
+      zoom: targetZoom,
+      duration: 320
+    });
+
+    postMapDiagnostic({
+      category: "viewport-clamped",
+      basemapId: config.id,
+      zoom: zoom,
+      clampedZoom: targetZoom,
+      clampedCenter: [targetLon, targetLat]
+    });
+  }
+
+  async function applyBasemap(config) {
+    const applyToken = ++basemapApplyToken;
     const normalized = normalizeBasemapConfig(config);
     if (!normalized) {
       return false;
     }
+
+    const resolvedTiles = await resolveBasemapTiles(normalized);
+    if (applyToken !== basemapApplyToken) {
+      return false;
+    }
+
+    const resolvedConfig = {
+      ...normalized,
+      tiles: resolvedTiles
+    };
 
     if (map.getLayer("basemap-layer")) {
       map.removeLayer("basemap-layer");
@@ -129,7 +301,7 @@
       map.removeSource("basemap");
     }
 
-    map.addSource("basemap", buildRasterSource(normalized));
+    map.addSource("basemap", buildRasterSource(resolvedConfig));
 
     const beforeId = map.getLayer("track-line") ? "track-line" : undefined;
     map.addLayer(
@@ -141,7 +313,8 @@
       beforeId
     );
 
-    activeBasemap = normalized;
+    activeBasemap = resolvedConfig;
+    applyViewportConstraints(resolvedConfig, true);
     return true;
   }
 
@@ -170,7 +343,10 @@
       return { url };
     },
     center: [8.6821, 50.1109],
-    zoom: 8
+    zoom: 8,
+    minZoom: isHessenBasemap(activeBasemap) && Number.isFinite(activeBasemap.minZoom) ? activeBasemap.minZoom : 0,
+    maxZoom: isHessenBasemap(activeBasemap) && Number.isFinite(activeBasemap.maxZoom) ? activeBasemap.maxZoom : 22,
+    maxBounds: isHessenBasemap(activeBasemap) ? toMapMaxBounds(activeBasemap.bounds) : null
   });
 
   const profilePanel = document.getElementById("profile-panel");
@@ -1029,7 +1205,7 @@
     },
 
     setBasemap(payload) {
-      applyBasemap(payload);
+      void applyBasemap(payload);
     },
 
     getBasemap() {
@@ -1072,13 +1248,28 @@
         return;
       }
 
+      const fitOptions = {
+        padding: 24,
+        duration: 350
+      };
+
+      if (isHessenBasemap(activeBasemap) && Number.isFinite(activeBasemap.maxZoom)) {
+        fitOptions.maxZoom = activeBasemap.maxZoom;
+      }
+
       map.fitBounds(
         [
           [bounds.minLon, bounds.minLat],
           [bounds.maxLon, bounds.maxLat]
         ],
-        { padding: 24, duration: 350 }
+        fitOptions
       );
+
+      if (isHessenBasemap(activeBasemap)) {
+        map.once("moveend", () => {
+          applyViewportConstraints(activeBasemap, true);
+        });
+      }
     }
   };
 
@@ -1087,6 +1278,7 @@
     ensureEndpointLayer();
     ensureSelectionLayer();
     ensureSelectionMarkerLayer();
+    applyViewportConstraints(activeBasemap, true);
     applyProfileVisible(false);
     if (window.chrome?.webview) {
       window.chrome.webview.postMessage("map-ready");
@@ -1157,5 +1349,19 @@
     cancelHoverRequest();
     clearHoverPopup();
     postHoverClear();
+  });
+
+  map.on("error", (event) => {
+    const message = event?.error?.message ?? event?.message ?? "Unknown map error";
+    const isBasemapRelated = event?.sourceId === "basemap";
+    const hasTileContext = !!event?.tile;
+
+    postMapDiagnostic({
+      category: hasTileContext || isBasemapRelated ? "tile-error" : "map-error",
+      basemapId: activeBasemap?.id,
+      sourceId: event?.sourceId ?? null,
+      zoom: map.getZoom(),
+      message: String(message)
+    });
   });
 })();

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Text.Json;
 using System.Globalization;
 using System.Xml.Linq;
+using System.Net.Http;
 using GpxCut.Core.IO;
 using GpxCut.Core.Domain;
 using GpxCut.Core.Editing;
@@ -23,6 +24,16 @@ namespace GpxCut.App;
 public partial class MainWindow : Window
 {
     private static readonly object LogSync = new();
+    private static readonly HttpClient WmsCapabilitiesHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(5)
+    };
+    private static readonly Dictionary<string, (int MinZoom, int MaxZoom)> HessenZoomFallbackByLayerId =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["hessen-dop20-wms"] = (12, 15),
+            ["hessen-dtk25-wms"] = (11, 16)
+        };
     private readonly GpxReader _gpxReader = new();
     private readonly GpxWriter _gpxWriter = new();
     private readonly string? _startupFilePath;
@@ -56,6 +67,8 @@ public partial class MainWindow : Window
     private string? _activeWebViewUserDataFolder;
     private ContextMenu? _basemapContextMenu;
     private readonly AppSettings _appSettings = LoadAppSettings();
+    private readonly Dictionary<string, (int MinZoom, int MaxZoom)> _hessenZoomCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public MainWindow()
         : this(null)
@@ -476,6 +489,12 @@ public partial class MainWindow : Window
 
             var messageType = typeNode.GetString();
 
+            if (string.Equals(messageType, "map-diagnostic", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleMapDiagnosticMessage(root);
+                return;
+            }
+
             if (string.Equals(messageType, "map-empty-contextmenu", StringComparison.OrdinalIgnoreCase))
             {
                 if (!root.TryGetProperty("x", out var xNode) || xNode.ValueKind != JsonValueKind.Number
@@ -657,11 +676,237 @@ public partial class MainWindow : Window
 
     private async Task ApplyBasemapAsync(BasemapLayerConfig basemap)
     {
-        var basemapJson = JsonSerializer.Serialize(basemap);
+        var effectiveBasemap = await ResolveRuntimeBasemapAsync(basemap);
+        var basemapJson = JsonSerializer.Serialize(effectiveBasemap);
         await ExecuteScriptsAsync([$"window.gpxcutMap.setBasemap({basemapJson});"]);
         _activeBasemapId = basemap.Id;
         ApplyBasemapUiHints(basemap);
         SaveSelectedBasemapId(basemap.Id);
+    }
+
+    private static bool IsHessenBasemap(BasemapLayerConfig basemap)
+    {
+        return basemap.Id.StartsWith("hessen-", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<BasemapLayerConfig> ResolveRuntimeBasemapAsync(BasemapLayerConfig basemap)
+    {
+        if (!IsHessenBasemap(basemap) || !string.Equals(basemap.Type, "wms", StringComparison.OrdinalIgnoreCase))
+        {
+            return basemap;
+        }
+
+        if (_hessenZoomCache.TryGetValue(basemap.Id, out var cachedRange))
+        {
+            return basemap with { MinZoom = cachedRange.MinZoom, MaxZoom = cachedRange.MaxZoom };
+        }
+
+        var resolvedRange = await TryResolveHessenZoomRangeFromCapabilitiesAsync(basemap);
+        if (resolvedRange is null && HessenZoomFallbackByLayerId.TryGetValue(basemap.Id, out var fallbackRange))
+        {
+            resolvedRange = fallbackRange;
+            LogError("MAP_HESSEN_ZOOM_FALLBACK", null, $"{basemap.Id} -> {fallbackRange.MinZoom}-{fallbackRange.MaxZoom}");
+        }
+
+        if (resolvedRange is null)
+        {
+            return basemap;
+        }
+
+        _hessenZoomCache[basemap.Id] = resolvedRange.Value;
+        return basemap with
+        {
+            MinZoom = resolvedRange.Value.MinZoom,
+            MaxZoom = resolvedRange.Value.MaxZoom
+        };
+    }
+
+    private async Task<(int MinZoom, int MaxZoom)?> TryResolveHessenZoomRangeFromCapabilitiesAsync(BasemapLayerConfig basemap)
+    {
+        if (basemap.Tiles.Count == 0)
+        {
+            return null;
+        }
+
+        var template = basemap.Tiles[0];
+        if (!Uri.TryCreate(template, UriKind.Absolute, out var tileUri))
+        {
+            return null;
+        }
+
+        var layerName = GetQueryParameterValue(tileUri, "LAYERS");
+        if (string.IsNullOrWhiteSpace(layerName))
+        {
+            return null;
+        }
+
+        var capabilitiesUri = BuildWmsCapabilitiesUri(tileUri);
+        try
+        {
+            var xml = await WmsCapabilitiesHttpClient.GetStringAsync(capabilitiesUri);
+            var doc = XDocument.Parse(xml);
+
+            var layerElement = doc
+                .Descendants()
+                .FirstOrDefault(element =>
+                    string.Equals(element.Name.LocalName, "Layer", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(
+                        element.Elements().FirstOrDefault(child =>
+                            string.Equals(child.Name.LocalName, "Name", StringComparison.OrdinalIgnoreCase))?.Value,
+                        layerName,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (layerElement is null)
+            {
+                return null;
+            }
+
+            var scaleHint = layerElement.Elements().FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "ScaleHint", StringComparison.OrdinalIgnoreCase));
+
+            if (scaleHint is not null)
+            {
+                var minAttr = scaleHint.Attribute("min")?.Value;
+                var maxAttr = scaleHint.Attribute("max")?.Value;
+
+                if (double.TryParse(minAttr, NumberStyles.Float, CultureInfo.InvariantCulture, out var minHint)
+                    && double.TryParse(maxAttr, NumberStyles.Float, CultureInfo.InvariantCulture, out var maxHint))
+                {
+                    var minZoom = ClampZoom((int)Math.Ceiling(ZoomFromScaleHint(maxHint)));
+                    var maxZoom = ClampZoom((int)Math.Floor(ZoomFromScaleHint(minHint)));
+                    if (maxZoom >= minZoom)
+                    {
+                        return (minZoom, maxZoom);
+                    }
+                }
+            }
+
+            var minScaleDenominatorText = layerElement.Elements().FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "MinScaleDenominator", StringComparison.OrdinalIgnoreCase))?.Value;
+            var maxScaleDenominatorText = layerElement.Elements().FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "MaxScaleDenominator", StringComparison.OrdinalIgnoreCase))?.Value;
+
+            if (double.TryParse(minScaleDenominatorText, NumberStyles.Float, CultureInfo.InvariantCulture, out var minScaleDenominator)
+                && double.TryParse(maxScaleDenominatorText, NumberStyles.Float, CultureInfo.InvariantCulture, out var maxScaleDenominator))
+            {
+                var minZoom = ClampZoom((int)Math.Ceiling(ZoomFromScaleDenominator(maxScaleDenominator)));
+                var maxZoom = ClampZoom((int)Math.Floor(ZoomFromScaleDenominator(minScaleDenominator)));
+                if (maxZoom >= minZoom)
+                {
+                    return (minZoom, maxZoom);
+                }
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogError("MAP_HESSEN_ZOOM_CAPA", ex, capabilitiesUri.ToString());
+            return null;
+        }
+    }
+
+    private static Uri BuildWmsCapabilitiesUri(Uri tileUri)
+    {
+        var language = GetQueryParameterValue(tileUri, "language");
+        var query = string.IsNullOrWhiteSpace(language)
+            ? "SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+            : $"language={Uri.EscapeDataString(language)}&SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1";
+
+        var builder = new UriBuilder(tileUri)
+        {
+            Query = query
+        };
+
+        return builder.Uri;
+    }
+
+    private static string? GetQueryParameterValue(Uri uri, string key)
+    {
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return null;
+        }
+
+        var query = uri.Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = pair.IndexOf('=');
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var name = Uri.UnescapeDataString(pair[..separatorIndex]);
+            if (!string.Equals(name, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return Uri.UnescapeDataString(pair[(separatorIndex + 1)..]);
+        }
+
+        return null;
+    }
+
+    private static int ClampZoom(int zoom)
+    {
+        return Math.Clamp(zoom, 0, 22);
+    }
+
+    private static double ZoomFromScaleHint(double scaleHint)
+    {
+        if (scaleHint <= 0)
+        {
+            return 22;
+        }
+
+        var metersPerPixel = scaleHint / Math.Sqrt(2.0);
+        return Math.Log(156543.03392804097 / metersPerPixel, 2);
+    }
+
+    private static double ZoomFromScaleDenominator(double scaleDenominator)
+    {
+        if (scaleDenominator <= 0)
+        {
+            return 22;
+        }
+
+        var metersPerPixel = scaleDenominator * 0.00028;
+        return Math.Log(156543.03392804097 / metersPerPixel, 2);
+    }
+
+    private void HandleMapDiagnosticMessage(JsonElement root)
+    {
+        var category = root.TryGetProperty("category", out var categoryNode)
+            ? categoryNode.GetString() ?? "unknown"
+            : "unknown";
+        var message = root.TryGetProperty("message", out var messageNode)
+            ? messageNode.GetString() ?? ""
+            : string.Empty;
+        var sourceId = root.TryGetProperty("sourceId", out var sourceNode)
+            ? sourceNode.GetString() ?? ""
+            : string.Empty;
+        var zoomText = root.TryGetProperty("zoom", out var zoomNode) && zoomNode.ValueKind == JsonValueKind.Number
+            ? zoomNode.GetDouble().ToString("0.00", CultureInfo.InvariantCulture)
+            : "n/a";
+
+        if (string.Equals(category, "tile-error", StringComparison.OrdinalIgnoreCase))
+        {
+            LogError("MAP_TILE", null, $"source={sourceId} zoom={zoomText} message={message}");
+            return;
+        }
+
+        if (string.Equals(category, "viewport-clamped", StringComparison.OrdinalIgnoreCase))
+        {
+            LogError("MAP_VIEWPORT_CLAMP", null, $"zoom={zoomText}");
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            LogError("MAP_DIAGNOSTIC", null, $"category={category} message={message}");
+        }
     }
 
     private void ApplyBasemapUiHints(BasemapLayerConfig basemap)
