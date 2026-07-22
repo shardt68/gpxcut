@@ -444,6 +444,202 @@
       }
     },
     {
+      "id": "nrw-dtk-wms",
+      "name": "NRW DTK Color (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis NRW, dl-de/by-2-0",
+      "licenseName": "Datenlizenz Deutschland - Namensnennung - Version 2.0",
+      "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for NRW topographic map layer nw_dtk_col.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.wms.nrw.de/geobasis/wms_nw_dtk?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=nw_dtk_col&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.8,
+          "minLat": 50.2,
+          "maxLon": 9.6,
+          "maxLat": 52.6
+        }
+      }
+    },
+    {
+      "id": "hessen-dop20-wms",
+      "name": "Hessen DOP20 RGB (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© HVBG Hessen",
+      "licenseName": "Open geodata terms by HVBG Hessen (verify per service metadata)",
+      "licenseUrl": "https://hvbg.hessen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Hessian orthophoto layer el_dop320_rgb.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.gds-srv.hessen.de/cgi-bin/lika-services/ogc-free-images.ows?language=ger&SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=el_dop320_rgb&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 7.8,
+          "minLat": 49.3,
+          "maxLon": 10.3,
+          "maxLat": 51.7
+        }
+      }
+    },
+    {
+      "id": "hessen-dtk25-wms",
+      "name": "Hessen DTK25 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© HVBG Hessen",
+      "licenseName": "Open geodata terms by HVBG Hessen (verify per service metadata)",
+      "licenseUrl": "https://hvbg.hessen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Hessian topographic map layer he_dtk25.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.gds-srv.hessen.de/cgi-bin/lika-services/ogc-free-maps.ows?language=ger&SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=he_dtk25&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 7.8,
+          "minLat": 49.3,
+          "maxLon": 10.3,
+          "maxLat": 51.7
+        }
+      }
+    },
+    {
+      "id": "rlp-dop20-wms",
+      "name": "Rhineland-Palatinate DOP20 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Vermessungs- und Katasterverwaltung Rheinland-Pfalz",
+      "licenseName": "Open geodata terms by Rheinland-Pfalz (verify per service metadata)",
+      "licenseUrl": "https://www.geoportal.rlp.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for RLP orthophoto layer rp_dop20.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=rp_dop20&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 6.0,
+          "minLat": 49.0,
+          "maxLon": 8.6,
+          "maxLat": 50.9
+        }
+      }
+    },
+    {
+      "id": "rlp-dtk25-wms",
+      "name": "Rhineland-Palatinate DTK25 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Vermessungs- und Katasterverwaltung Rheinland-Pfalz",
+      "licenseName": "Open geodata terms by Rheinland-Pfalz (verify per service metadata)",
+      "licenseUrl": "https://www.geoportal.rlp.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for RLP topographic map layer rp_dtk25.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geo4.service24.rlp.de/wms/rp_dtk25.fcgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=rp_dtk25&STYLES=default&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 6.0,
+          "minLat": 49.0,
+          "maxLon": 8.6,
+          "maxLat": 50.9
+        }
+      }
+    },
+    {
+      "id": "saarland-dop2006-wms",
+      "name": "Saarland DOP 2006 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LKVK Saarland",
+      "licenseName": "Open geodata terms by Saarland (verify per service metadata)",
+      "licenseUrl": "https://geoportal.saarland.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Saarland orthophoto layer Orthophoto 2006.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geoportal.lkvk.saarland.de/freewms/dop2006?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=Orthophoto%202006&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 6.3,
+          "minLat": 49.1,
+          "maxLon": 7.5,
+          "maxLat": 49.7
+        }
+      }
+    },
+    {
+      "id": "baden-wuerttemberg-dtk25-wms",
+      "name": "Baden-Wuerttemberg DTK25 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LGL Baden-Wuerttemberg",
+      "licenseName": "Open geodata terms by LGL Baden-Wuerttemberg (verify per service metadata)",
+      "licenseUrl": "https://www.lgl-bw.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for BW topographic map layer RDS_LY_DTK25K_COL.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://owsproxy.lgl-bw.de/owsproxy/ows/WMS_LGL-BW_ATKIS_DTK_25_K_A?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=RDS_LY_DTK25K_COL&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 7.5,
+          "minLat": 47.5,
+          "maxLon": 10.5,
+          "maxLat": 49.9
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
