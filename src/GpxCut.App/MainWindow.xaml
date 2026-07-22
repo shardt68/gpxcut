@@ -17,65 +17,97 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Row="0" Margin="12,10,12,8" LastChildFill="False">
-            <Button x:Name="OpenFileButton"
+        <StackPanel Grid.Row="0" Margin="12,10,12,8" Orientation="Vertical">
+            <WrapPanel Orientation="Horizontal">
+                <Button x:Name="OpenFileButton"
+                        Width="130"
+                        Height="34"
+                        Content="Open GPX"
+                        Click="OpenFileButton_Click" />
+                <Button x:Name="SaveFileButton"
                     Width="130"
                     Height="34"
-                    Content="Open GPX"
-                    Click="OpenFileButton_Click" />
-            <Button x:Name="SaveFileButton"
-                Width="130"
-                Height="34"
-                Margin="8,0,0,0"
-                Content="Save GPX"
-                IsEnabled="False"
-                Click="SaveFileButton_Click" />
-            <Button x:Name="SplitTrackButton"
-                Width="130"
-                Height="34"
-                Margin="8,0,0,0"
-                Content="Split Track"
-                IsEnabled="False"
-                Click="SplitTrackButton_Click" />
-            <Button x:Name="DeleteRangeButton"
-                Width="130"
-                Height="34"
-                Margin="8,0,0,0"
-                Content="Delete Range"
-                IsEnabled="False"
-                Click="DeleteRangeButton_Click" />
-            <Button x:Name="ExportRangeButton"
-                Width="130"
-                Height="34"
-                Margin="8,0,0,0"
-                Content="Export Range"
-                IsEnabled="False"
-                Click="ExportRangeButton_Click" />
-            <CheckBox x:Name="ShowProfileCheckBox"
-                      Margin="12,0,0,0"
-                      VerticalAlignment="Center"
-                      Content="Show Profile"
-                      IsEnabled="False"
-                      Checked="ShowProfileCheckBox_Checked"
-                      Unchecked="ShowProfileCheckBox_Unchecked" />
-            <ComboBox x:Name="ProfileModeComboBox"
-                      Width="220"
-                      Height="30"
-                      Margin="8,0,0,0"
-                      VerticalAlignment="Center"
-                      IsEnabled="False"
-                      SelectionChanged="ProfileModeComboBox_SelectionChanged"
-                      SelectedIndex="0">
-                <ComboBoxItem Content="Height over Time" />
-                <ComboBoxItem Content="Height over Distance" />
-                <ComboBoxItem Content="Speed over Time" />
-                <ComboBoxItem Content="Speed over Distance" />
-            </ComboBox>
-            <TextBlock x:Name="TrackSummaryTextBlock"
-                       Margin="12,0,0,0"
-                       VerticalAlignment="Center"
-                       Text="No file loaded." />
-        </DockPanel>
+                    Margin="8,0,0,0"
+                    Content="Save GPX"
+                    IsEnabled="False"
+                    Click="SaveFileButton_Click" />
+                <Button x:Name="SplitTrackButton"
+                    Width="130"
+                    Height="34"
+                    Margin="8,0,0,0"
+                    Content="Split Track"
+                    IsEnabled="False"
+                    Click="SplitTrackButton_Click" />
+                <Button x:Name="DeleteRangeButton"
+                    Width="130"
+                    Height="34"
+                    Margin="8,0,0,0"
+                    Content="Delete Range"
+                    IsEnabled="False"
+                    Click="DeleteRangeButton_Click" />
+                <Button x:Name="ExportRangeButton"
+                    Width="130"
+                    Height="34"
+                    Margin="8,0,0,0"
+                    Content="Export Range"
+                    IsEnabled="False"
+                    Click="ExportRangeButton_Click" />
+                <CheckBox x:Name="ShowProfileCheckBox"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          Content="Show Profile"
+                          IsEnabled="False"
+                          Checked="ShowProfileCheckBox_Checked"
+                          Unchecked="ShowProfileCheckBox_Unchecked" />
+                <ComboBox x:Name="ProfileModeComboBox"
+                          Width="220"
+                          Height="30"
+                          Margin="8,0,0,0"
+                          VerticalAlignment="Center"
+                          IsEnabled="False"
+                          SelectionChanged="ProfileModeComboBox_SelectionChanged"
+                          SelectedIndex="0">
+                    <ComboBoxItem Content="Height over Time" />
+                    <ComboBoxItem Content="Height over Distance" />
+                    <ComboBoxItem Content="Speed over Time" />
+                    <ComboBoxItem Content="Speed over Distance" />
+                </ComboBox>
+                <TextBlock Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="Basemap:" />
+                <ComboBox x:Name="BasemapComboBox"
+                          Width="260"
+                          Height="30"
+                          Margin="8,0,0,0"
+                          VerticalAlignment="Center"
+                          DisplayMemberPath="DisplayName"
+                          IsEnabled="False"
+                          SelectionChanged="BasemapComboBox_SelectionChanged" />
+                <TextBlock x:Name="TrackSummaryTextBlock"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="No file loaded." />
+            </WrapPanel>
+
+            <Border Margin="0,8,0,0"
+                    Padding="10,6"
+                    CornerRadius="4"
+                    BorderBrush="#D4D4D8"
+                    BorderThickness="1"
+                    Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock x:Name="BasemapPolicyTextBlock"
+                               Text="Basemap policy: n/a"
+                               TextWrapping="Wrap"
+                               FontSize="12" />
+                    <TextBlock x:Name="BasemapCacheTextBlock"
+                               Margin="0,4,0,0"
+                               Text="Tile cache: n/a"
+                               TextWrapping="Wrap"
+                               FontSize="12" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <Border Grid.Row="1" Margin="12,0,12,8" CornerRadius="6" BorderBrush="#D4D4D8" BorderThickness="1">
             <wv2:WebView2 x:Name="MapWebView" />

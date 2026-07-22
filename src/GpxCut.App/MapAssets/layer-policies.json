@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "selectedLayerId": "osm-standard",
+  "layers": [
+    {
+      "id": "osm-standard",
+      "name": "OpenStreetMap Standard",
+      "enabledByDefault": true,
+      "attribution": "&copy; OpenStreetMap contributors",
+      "licenseName": "ODbL 1.0 (data)",
+      "licenseUrl": "https://www.openstreetmap.org/copyright",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 7,
+      "offlinePrefetchAllowed": false,
+      "notes": "Interactive use only on tile.openstreetmap.org. No bulk prefetch/offline seeding.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "opentopomap",
+      "name": "OpenTopoMap",
+      "enabledByDefault": false,
+      "attribution": "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © OpenTopoMap (CC-BY-SA)",
+      "licenseName": "CC BY-SA 3.0 (Map style) + OSM attribution",
+      "licenseUrl": "https://www.opentopomap.org/about",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Free use with attribution; avoid mass downloads and rely on normal interactive tile usage.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+          "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "basemapde-web-raster-farbe",
+      "name": "basemap.de Web Raster Farbe (DE)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis-DE / BKG (Jahr des letzten Datenbezugs) CC BY 4.0",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://sgx.geodatenzentrum.de/wmts_basemapde/1.0.0/WMTSCapabilities.xml",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Germany basemap WMTS layer, coverage focused on Germany.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "basemapde-web-raster-grau",
+      "name": "basemap.de Web Raster Grau (DE)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis-DE / BKG (Jahr des letzten Datenbezugs) CC BY 4.0",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://sgx.geodatenzentrum.de/wmts_basemapde/1.0.0/WMTSCapabilities.xml",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Germany grayscale basemap WMTS layer, coverage focused on Germany.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_grau/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "basemapde-hillshade",
+      "name": "basemap.de Hillshade (DE)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis-DE / BKG (Jahr des letzten Datenbezugs) CC BY 4.0",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://sgx.geodatenzentrum.de/wmts_basemapde_schummerung/1.0.0/WMTSCapabilities.xml",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Germany relief shading WMTS layer, coverage focused on Germany.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://sgx.geodatenzentrum.de/wmts_basemapde_schummerung/tile/1.0.0/de_basemapde_web_raster_hillshade/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "nrw-dop",
+      "name": "NRW DOP Luftbild (DE)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis NRW, dl-de/by-2-0",
+      "licenseName": "Datenlizenz Deutschland - Namensnennung - Version 2.0",
+      "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Orthophoto (10 cm) for North Rhine-Westphalia via public WMTS endpoint. Observe provider attribution requirements.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "wmts",
+        "tiles": [
+          "https://www.wmts.nrw.de/geobasis/wmts_nw_dop/tiles/nw_dop/EPSG_3857_16/{z}/{x}/{y}"
+        ],
+        "tileSize": 256,
+        "wmtsZoomOffset": -5,
+        "minZoom": 5,
+        "maxZoom": 21
+      }
+    },
+    {
+      "id": "bb-be-dop20c-wms",
+      "name": "Brandenburg/Berlin DOP20 Farbe (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis-DE/LGB, dl-de/by-2-0",
+      "licenseName": "Datenlizenz Deutschland - Namensnennung - Version 2.0",
+      "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for BB/BE orthophoto (20 cm, color).",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=bebb_dop20c&STYLES=&FORMAT=image/png&TRANSPARENT=FALSE&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "sachsen-dop-rgb-wms",
+      "name": "Sachsen DOP RGB (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoSN, Freistaat Sachsen",
+      "licenseName": "Open geodata terms by Freistaat Sachsen (verify per service metadata)",
+      "licenseUrl": "https://www.geodaten.sachsen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint with sn_dop_020 orthophoto layer.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=sn_dop_020&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "thueringen-dop-wms",
+      "name": "Thuringia DOP (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GDI-TH",
+      "licenseName": "Open geodata terms by GDI-TH/TLBG (verify per service metadata)",
+      "licenseUrl": "https://geoportal.thueringen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint with th_dop orthophoto layer.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geoproxy.geoportal-th.de/geoproxy/services?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=th_dop&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "mv-dop-wms",
+      "name": "Mecklenburg-Vorpommern DOP (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis M-V",
+      "licenseName": "Open geodata terms by GeoPortal.MV (verify per service metadata)",
+      "licenseUrl": "https://www.geoportal-mv.de/portal/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint with mv_dop orthophoto layer.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geodaten-mv.de/dienste/adv_dop?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=mv_dop&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "sachsen-anhalt-dop-wms-pending",
+      "name": "Saxony-Anhalt DOP OpenData (WMS, pending)",
+      "enabledByDefault": false,
+      "attribution": "© LVermGeo Sachsen-Anhalt",
+      "licenseName": "OpenData service (verify access and terms per metadata)",
+      "licenseUrl": "https://www.geodatenportal.sachsen-anhalt.de/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official OpenData WMS endpoint identified; direct capabilities access returned 403 from current environment. Pending validation from target runtime and direct WMS renderer support.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP20_OpenData/guest?SERVICE=WMS&REQUEST=GetCapabilities"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "usgs-imagery-only",
+      "name": "USGS Imagery Only (USA)",
+      "enabledByDefault": false,
+      "attribution": "Map services and data available from U.S. Geological Survey, National Geospatial Program.",
+      "licenseName": "US Public Domain",
+      "licenseUrl": "https://www.usgs.gov/faqs/what-are-terms-uselicensing-map-services-and-data-national-map",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": true,
+      "notes": "Coverage focus is USA. Attribution statement requested by USGS.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+        ],
+        "tileSize": 256
+      }
+    },
+    {
+      "id": "usgs-imagery-topo",
+      "name": "USGS Imagery Topo (USA)",
+      "enabledByDefault": false,
+      "attribution": "Map services and data available from U.S. Geological Survey, National Geospatial Program.",
+      "licenseName": "US Public Domain",
+      "licenseUrl": "https://www.usgs.gov/faqs/what-are-terms-uselicensing-map-services-and-data-national-map",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": true,
+      "notes": "Imagery mixed with topographic information. Coverage focus is USA.",
+      "reviewedAt": "2026-07-21",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}"
+        ],
+        "tileSize": 256
+      }
+    }
+  ]
+}

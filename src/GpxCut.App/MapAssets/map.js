@@ -2,27 +2,172 @@
   const cursorProximityPixels = 12;
   const hoverDelayMs = 700;
 
+  const fallbackBasemap = {
+    id: "osm-standard",
+    name: "OpenStreetMap Standard",
+    type: "xyz",
+    tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+    tileSize: 256,
+    attribution: "&copy; OpenStreetMap contributors"
+  };
+
+  function normalizeBasemapConfig(candidate) {
+    if (!candidate || typeof candidate !== "object") {
+      return null;
+    }
+
+    const candidateTiles = candidate.tiles ?? candidate.Tiles;
+    const tiles = Array.isArray(candidateTiles)
+      ? candidateTiles.filter((tile) => typeof tile === "string" && tile.length > 0)
+      : [];
+
+    if (tiles.length === 0) {
+      return null;
+    }
+
+    const candidateTypeRaw = candidate.type ?? candidate.Type;
+    const candidateType = typeof candidateTypeRaw === "string"
+      ? candidateTypeRaw.toLowerCase()
+      : "xyz";
+    if (candidateType !== "xyz" && candidateType !== "wmts" && candidateType !== "wms") {
+      return null;
+    }
+
+    const candidateTileSize = candidate.tileSize ?? candidate.TileSize;
+    const candidateAttribution = candidate.attribution ?? candidate.Attribution;
+    const candidateId = candidate.id ?? candidate.Id;
+    const candidateName = candidate.name ?? candidate.Name;
+    const candidateWmtsZoomOffset = candidate.wmtsZoomOffset ?? candidate.WmtsZoomOffset;
+    const candidateMinZoom = candidate.minZoom ?? candidate.MinZoom;
+    const candidateMaxZoom = candidate.maxZoom ?? candidate.MaxZoom;
+
+    const tileSize = Number.isFinite(candidateTileSize) ? candidateTileSize : 256;
+    const attribution = typeof candidateAttribution === "string"
+      ? candidateAttribution
+      : fallbackBasemap.attribution;
+    const wmtsZoomOffset = Number.isFinite(candidateWmtsZoomOffset) ? candidateWmtsZoomOffset : 0;
+    const minZoom = Number.isFinite(candidateMinZoom) ? candidateMinZoom : undefined;
+    const maxZoom = Number.isFinite(candidateMaxZoom) ? candidateMaxZoom : undefined;
+
+    return {
+      id: typeof candidateId === "string" ? candidateId : fallbackBasemap.id,
+      name: typeof candidateName === "string" ? candidateName : fallbackBasemap.name,
+      type: candidateType,
+      tiles,
+      tileSize,
+      attribution,
+      wmtsZoomOffset,
+      minZoom,
+      maxZoom
+    };
+  }
+
+  let activeBasemap = normalizeBasemapConfig(window.__gpxcutBasemapConfig) ?? fallbackBasemap;
+
+  function buildRasterSource(config) {
+    const source = {
+      type: "raster",
+      tiles: config.tiles,
+      tileSize: config.tileSize,
+      attribution: config.attribution
+    };
+
+    if (Number.isFinite(config.minZoom)) {
+      source.minzoom = config.minZoom;
+    }
+
+    if (Number.isFinite(config.maxZoom)) {
+      source.maxzoom = config.maxZoom;
+    }
+
+    return source;
+  }
+
+  function rewriteWmtsTileUrl(url, config) {
+    if (!config || config.type !== "wmts") {
+      return url;
+    }
+
+    const zoomOffset = Number.isFinite(config.wmtsZoomOffset) ? config.wmtsZoomOffset : 0;
+    if (zoomOffset === 0) {
+      return url;
+    }
+
+    const match = url.match(/\/([0-9]+)\/([0-9]+)\/([0-9]+)(\.[a-zA-Z0-9]+)?(\?.*)?$/);
+    if (!match) {
+      return url;
+    }
+
+    const z = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(z)) {
+      return url;
+    }
+
+    const mappedZ = z + zoomOffset;
+    if (!Number.isFinite(mappedZ) || mappedZ < 0) {
+      return url;
+    }
+
+    const mappedZString = mappedZ.toString().padStart(2, "0");
+    return url.replace(
+      /\/([0-9]+)\/([0-9]+)\/([0-9]+)(\.[a-zA-Z0-9]+)?(\?.*)?$/,
+      `/${mappedZString}/${match[2]}/${match[3]}${match[4] ?? ""}${match[5] ?? ""}`
+    );
+  }
+
+  function applyBasemap(config) {
+    const normalized = normalizeBasemapConfig(config);
+    if (!normalized) {
+      return false;
+    }
+
+    if (map.getLayer("basemap-layer")) {
+      map.removeLayer("basemap-layer");
+    }
+
+    if (map.getSource("basemap")) {
+      map.removeSource("basemap");
+    }
+
+    map.addSource("basemap", buildRasterSource(normalized));
+
+    const beforeId = map.getLayer("track-line") ? "track-line" : undefined;
+    map.addLayer(
+      {
+        id: "basemap-layer",
+        type: "raster",
+        source: "basemap"
+      },
+      beforeId
+    );
+
+    activeBasemap = normalized;
+    return true;
+  }
+
   const map = new maplibregl.Map({
     container: "map",
     style: {
       version: 8,
       sources: {
-        osm: {
-          type: "raster",
-          tiles: [
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          ],
-          tileSize: 256,
-          attribution: "&copy; OpenStreetMap contributors"
-        }
+        basemap: buildRasterSource(activeBasemap)
       },
       layers: [
         {
-          id: "osm",
+          id: "basemap-layer",
           type: "raster",
-          source: "osm"
+          source: "basemap"
         }
       ]
+    },
+    transformRequest: (url, resourceType) => {
+      if (resourceType === "Tile") {
+        return {
+          url: rewriteWmtsTileUrl(url, activeBasemap)
+        };
+      }
+
+      return { url };
     },
     center: [8.6821, 50.1109],
     zoom: 8
@@ -868,6 +1013,14 @@
 
     clearProfile() {
       resetProfile();
+    },
+
+    setBasemap(payload) {
+      applyBasemap(payload);
+    },
+
+    getBasemap() {
+      return activeBasemap;
     },
 
     setEndpoints(payload) {

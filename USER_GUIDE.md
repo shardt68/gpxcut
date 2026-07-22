@@ -105,6 +105,20 @@ Use split when:
 - Export range: keep original track and create a separate GPX of the selected section.
 - Split track: create two independent parts at one position.
 
+## Basemap Selection
+
+You can switch the map background using the `Basemap` selector in the top toolbar.
+
+- The app lists only basemap entries that are valid in the layer policy file.
+- If a configured source is missing or invalid, GpxCut falls back to OpenStreetMap Standard.
+- Some imagery layers may be region-specific (for example USA-focused datasets).
+- The selected basemap is remembered for the next app start.
+- Hover the basemap selector to see license and cache/offline policy hints.
+- If a layer is marked `[No cache]`, GpxCut asks for explicit confirmation before activating it.
+- A policy info panel below the toolbar shows the active layer's license, cache, and offline rules.
+- Additional open options now include OpenTopoMap and official basemap.de layers for Germany.
+- NRW DOP aerial imagery is available in the basemap selector via WMTS zoom mapping (`wmtsZoomOffset`).
+
 ## Notes
 
 - Keep a backup of original files before destructive edits.

@@ -39,6 +39,9 @@ public partial class MainWindow : Window
     private const double HoverToleranceMeters = 35.0;
     private const int FastStepSize = 10;
     private const int MaxProfileSamples = 4_000;
+    private const string DefaultStartupBasemapId = "osm-standard";
+    private const string MapAssetsVirtualHost = "appassets.gpxcut";
+    private const long WebViewDiskCacheLimitBytes = 256L * 1024L * 1024L;
     private const string ProfileModeElevationTime = "elevation-time";
     private const string ProfileModeElevationDistance = "elevation-distance";
     private const string ProfileModeSpeedTime = "speed-time";
@@ -46,6 +49,11 @@ public partial class MainWindow : Window
 
     private bool _isProfileVisible;
     private string _profileMode = ProfileModeElevationTime;
+    private LayerPolicyState _layerPolicyState = CreateFallbackLayerPolicyState();
+    private bool _isUpdatingBasemapSelection;
+    private string? _activeBasemapId;
+    private string? _activeWebViewUserDataFolder;
+    private readonly AppSettings _appSettings = LoadAppSettings();
 
     public MainWindow()
         : this(null)
@@ -63,6 +71,7 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         _profileMode = GetSelectedProfileModeFromUi();
+        UpdateActionButtons();
         await InitializeMapAsync();
     }
 
@@ -80,19 +89,42 @@ public partial class MainWindow : Window
         {
             SetStatus("Initializing map...");
 
+            _layerPolicyState = LoadLayerPolicyState(mapFilePath, DefaultStartupBasemapId);
+            RefreshBasemapComboBox();
+
             var userDataFolders = BuildWebViewUserDataFolders();
             Exception? lastInitializeException = null;
+            var layerBootstrapScript = BuildLayerBootstrapScript(_layerPolicyState);
 
             foreach (var folder in userDataFolders)
             {
                 try
                 {
                     Directory.CreateDirectory(folder);
-                    var webViewEnvironment = await CoreWebView2Environment.CreateAsync(userDataFolder: folder);
+                    var webViewEnvironment = await CoreWebView2Environment.CreateAsync(
+                        userDataFolder: folder,
+                        options: BuildWebViewEnvironmentOptions());
                     await MapWebView.EnsureCoreWebView2Async(webViewEnvironment);
+                    await MapWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(layerBootstrapScript);
                     MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2OnWebMessageReceived;
 
-                    MapWebView.Source = new Uri(mapFilePath, UriKind.Absolute);
+                    _activeWebViewUserDataFolder = folder;
+                    UpdateCacheInfoUi();
+                    var mapAssetsDirectory = Path.GetDirectoryName(mapFilePath);
+                    if (!string.IsNullOrWhiteSpace(mapAssetsDirectory))
+                    {
+                        MapWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                            MapAssetsVirtualHost,
+                            mapAssetsDirectory,
+                            CoreWebView2HostResourceAccessKind.Allow);
+
+                        MapWebView.Source = new Uri($"https://{MapAssetsVirtualHost}/map.html", UriKind.Absolute);
+                    }
+                    else
+                    {
+                        MapWebView.Source = new Uri(mapFilePath, UriKind.Absolute);
+                    }
+
                     SetStatus($"Initializing map... (WebView data: {folder})");
                     return;
                 }
@@ -120,10 +152,27 @@ public partial class MainWindow : Window
 
         return
         [
-            Path.Combine(localAppData, "GpxCut", "WebView2"),
-            Path.Combine(localAppData, "GpxCut", "WebView2Fallback"),
-            Path.Combine(tempPath, "GpxCut", "WebView2")
+            Path.Combine(localAppData, "GpxCut", "cache", "webview2"),
+            Path.Combine(localAppData, "GpxCut", "cache", "webview2-fallback"),
+            Path.Combine(tempPath, "GpxCut", "cache", "webview2")
         ];
+    }
+
+    private static CoreWebView2EnvironmentOptions BuildWebViewEnvironmentOptions()
+    {
+        return new CoreWebView2EnvironmentOptions
+        {
+            AdditionalBrowserArguments = $"--disk-cache-size={WebViewDiskCacheLimitBytes}"
+        };
+    }
+
+    private void UpdateCacheInfoUi()
+    {
+        var cacheRoot = _activeWebViewUserDataFolder;
+        var displayPath = string.IsNullOrWhiteSpace(cacheRoot) ? "n/a" : cacheRoot;
+        var sizeLimitMiB = WebViewDiskCacheLimitBytes / (1024L * 1024L);
+        BasemapCacheTextBlock.Text =
+            $"Tile cache (WebView2): {displayPath} | Limit: {sizeLimitMiB} MiB | Mode: browser-like HTTP cache";
     }
 
     private static string? ResolveMapHtmlPath()
@@ -163,6 +212,212 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private string BuildLayerBootstrapScript(LayerPolicyState layerPolicyState)
+    {
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            basemap = layerPolicyState.EffectiveBasemap,
+            loadedFromPolicy = layerPolicyState.LoadedFromPolicy,
+            policyPath = layerPolicyState.LoadedFromPolicy ? layerPolicyState.PolicyPath : null
+        });
+
+        return $"window.__gpxcutLayerBootstrap = {payloadJson}; window.__gpxcutBasemapConfig = window.__gpxcutLayerBootstrap.basemap;";
+    }
+
+    private static LayerPolicyState LoadLayerPolicyState(string mapFilePath, string? preferredLayerId)
+    {
+        var fallback = CreateFallbackLayerPolicyState();
+        var policyPath = ResolveLayerPoliciesPath(mapFilePath);
+        if (string.IsNullOrWhiteSpace(policyPath) || !File.Exists(policyPath))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(policyPath);
+            var policy = JsonSerializer.Deserialize<LayerPolicyDocument>(
+                json,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            var validLayers = (policy?.Layers ?? [])
+                .Where(IsValidXyzLayer)
+                .Select(ToBasemapConfig)
+                .ToList();
+
+            if (validLayers.Count == 0)
+            {
+                LogError("MAP_POLICY_EMPTY", null, $"No valid XYZ layers in {policyPath}");
+                return fallback;
+            }
+
+            BasemapLayerConfig? selected = null;
+            if (!string.IsNullOrWhiteSpace(preferredLayerId))
+            {
+                selected = validLayers.FirstOrDefault(layer =>
+                    string.Equals(layer.Id, preferredLayerId, StringComparison.OrdinalIgnoreCase) && layer.CacheAllowed);
+            }
+
+            if (!string.IsNullOrWhiteSpace(policy?.SelectedLayerId))
+            {
+                selected ??= validLayers.FirstOrDefault(layer =>
+                    string.Equals(layer.Id, policy.SelectedLayerId, StringComparison.OrdinalIgnoreCase) && layer.CacheAllowed);
+            }
+
+            selected ??= validLayers.FirstOrDefault(layer =>
+                policy?.Layers.Any(entry => entry.EnabledByDefault &&
+                    string.Equals(entry.Id, layer.Id, StringComparison.OrdinalIgnoreCase)) == true && layer.CacheAllowed);
+            selected ??= validLayers.FirstOrDefault(layer => layer.CacheAllowed);
+            selected ??= validLayers[0];
+
+            return new LayerPolicyState(
+                EffectiveBasemap: selected,
+                AvailableBasemaps: validLayers,
+                LoadedFromPolicy: true,
+                PolicyPath: policyPath);
+        }
+        catch (Exception ex)
+        {
+            LogError("MAP_POLICY_PARSE", ex, policyPath);
+            return fallback;
+        }
+    }
+
+    private static BasemapLayerConfig ToBasemapConfig(LayerPolicyEntry entry)
+    {
+        return new BasemapLayerConfig(
+            Id: entry.Id,
+            Name: entry.Name,
+            Type: string.IsNullOrWhiteSpace(entry.Map?.Type) ? "xyz" : entry.Map!.Type,
+            Tiles: entry.Map?.Tiles ?? [],
+            TileSize: entry.Map?.TileSize ?? 256,
+            WmtsZoomOffset: entry.Map?.WmtsZoomOffset,
+            MinZoom: entry.Map?.MinZoom,
+            MaxZoom: entry.Map?.MaxZoom,
+            Attribution: string.IsNullOrWhiteSpace(entry.Attribution)
+                ? "&copy; OpenStreetMap contributors"
+                : entry.Attribution,
+            LicenseName: string.IsNullOrWhiteSpace(entry.LicenseName) ? "Unknown" : entry.LicenseName,
+            LicenseUrl: entry.LicenseUrl,
+            CommercialUseAllowed: entry.CommercialUseAllowed,
+            CacheAllowed: entry.CacheAllowed,
+            CacheMode: string.IsNullOrWhiteSpace(entry.CacheMode) ? "unknown" : entry.CacheMode,
+            MinTtlDays: entry.MinTtlDays,
+            OfflinePrefetchAllowed: entry.OfflinePrefetchAllowed,
+            Notes: entry.Notes);
+    }
+
+    private static LayerPolicyState CreateFallbackLayerPolicyState()
+    {
+        var fallbackLayer = CreateFallbackLayer();
+        return new LayerPolicyState(
+            EffectiveBasemap: fallbackLayer,
+            AvailableBasemaps: [fallbackLayer],
+            LoadedFromPolicy: false,
+            PolicyPath: null);
+    }
+
+    private void RefreshBasemapComboBox()
+    {
+        _isUpdatingBasemapSelection = true;
+        try
+        {
+            var items = _layerPolicyState.AvailableBasemaps
+                .Select(layer => new BasemapComboItem(layer.Id, layer.Name, layer))
+                .ToList();
+
+            BasemapComboBox.ItemsSource = items;
+
+            var selected = items.FirstOrDefault(item =>
+                string.Equals(item.Id, _layerPolicyState.EffectiveBasemap.Id, StringComparison.OrdinalIgnoreCase))
+                ?? items.FirstOrDefault();
+
+            BasemapComboBox.SelectedItem = selected;
+            _activeBasemapId = selected?.Id;
+            if (selected is not null)
+            {
+                ApplyBasemapUiHints(selected.Basemap);
+            }
+        }
+        finally
+        {
+            _isUpdatingBasemapSelection = false;
+        }
+
+        UpdateActionButtons();
+    }
+
+    private static bool IsValidXyzLayer(LayerPolicyEntry entry)
+    {
+        if (entry.Map is null)
+        {
+            return false;
+        }
+
+        var layerType = entry.Map.Type ?? string.Empty;
+        if (!string.Equals(layerType, "xyz", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(layerType, "wmts", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(layerType, "wms", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (entry.Map.Tiles is null || entry.Map.Tiles.Count == 0)
+        {
+            return false;
+        }
+
+        return entry.Map.Tiles.All(tile => !string.IsNullOrWhiteSpace(tile));
+    }
+
+    private static BasemapLayerConfig CreateFallbackLayer()
+    {
+        return new BasemapLayerConfig(
+            Id: "osm-standard",
+            Name: "OpenStreetMap Standard",
+            Type: "xyz",
+            Tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            TileSize: 256,
+            WmtsZoomOffset: null,
+            MinZoom: null,
+            MaxZoom: null,
+            Attribution: "&copy; OpenStreetMap contributors",
+            LicenseName: "ODbL 1.0 (data)",
+            LicenseUrl: "https://www.openstreetmap.org/copyright",
+            CommercialUseAllowed: true,
+            CacheAllowed: true,
+            CacheMode: "http-headers",
+            MinTtlDays: 7,
+            OfflinePrefetchAllowed: false,
+            Notes: "Interactive use only on tile.openstreetmap.org. No bulk prefetch/offline seeding.");
+    }
+
+    private static string? ResolveLayerPoliciesPath(string mapFilePath)
+    {
+        var candidates = new List<string>();
+        var mapAssetsDirectory = Path.GetDirectoryName(mapFilePath);
+        if (!string.IsNullOrWhiteSpace(mapAssetsDirectory))
+        {
+            candidates.Add(Path.Combine(mapAssetsDirectory, "layer-policies.json"));
+        }
+
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "MapAssets", "layer-policies.json"));
+        candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "MapAssets", "layer-policies.json"));
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
     private void CoreWebView2OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         _ = HandleWebMessageAsync(e.WebMessageAsJson);
@@ -185,6 +440,7 @@ public partial class MainWindow : Window
                 if (string.Equals(root.GetString(), "map-ready", StringComparison.OrdinalIgnoreCase))
                 {
                     _isMapReady = true;
+                    UpdateActionButtons();
                     if (!string.IsNullOrWhiteSpace(_startupFilePath))
                     {
                         await OpenTrackFileAsync(_startupFilePath);
@@ -368,6 +624,87 @@ public partial class MainWindow : Window
                 await MapWebView.CoreWebView2.ExecuteScriptAsync(script);
             }
         }
+    }
+
+    private async Task ApplyBasemapAsync(BasemapLayerConfig basemap)
+    {
+        var basemapJson = JsonSerializer.Serialize(basemap);
+        await ExecuteScriptsAsync([$"window.gpxcutMap.setBasemap({basemapJson});"]);
+        _activeBasemapId = basemap.Id;
+        ApplyBasemapUiHints(basemap);
+        SaveSelectedBasemapId(basemap.Id);
+    }
+
+    private void ApplyBasemapUiHints(BasemapLayerConfig basemap)
+    {
+        var ttlText = basemap.MinTtlDays is null ? "n/a" : $">= {basemap.MinTtlDays.Value}d";
+        BasemapComboBox.ToolTip =
+            $"License: {basemap.LicenseName}\n" +
+            $"Commercial use: {(basemap.CommercialUseAllowed ? "yes" : "no")}\n" +
+            $"Cache allowed: {(basemap.CacheAllowed ? "yes" : "no")} ({basemap.CacheMode}, min TTL {ttlText})\n" +
+            $"Offline prefetch: {(basemap.OfflinePrefetchAllowed ? "yes" : "no")}";
+
+        var licenseText = basemap.LicenseName;
+        if (!string.IsNullOrWhiteSpace(basemap.LicenseUrl))
+        {
+            licenseText += $" ({basemap.LicenseUrl})";
+        }
+
+        var notesText = string.IsNullOrWhiteSpace(basemap.Notes)
+            ? string.Empty
+            : $" | Notes: {basemap.Notes}";
+
+        BasemapPolicyTextBlock.Text =
+            $"Basemap policy - {basemap.Name}: " +
+            $"License: {licenseText} | " +
+            $"Commercial: {(basemap.CommercialUseAllowed ? "yes" : "no")} | " +
+            $"Cache: {(basemap.CacheAllowed ? "yes" : "no")} ({basemap.CacheMode}, min TTL {ttlText}) | " +
+            $"Offline prefetch: {(basemap.OfflinePrefetchAllowed ? "yes" : "no")}" +
+            notesText;
+    }
+
+    private void SaveSelectedBasemapId(string basemapId)
+    {
+        try
+        {
+            _appSettings.SelectedBasemapId = basemapId;
+            var settingsDirectory = GetSettingsDirectory();
+            Directory.CreateDirectory(settingsDirectory);
+            var settingsPath = Path.Combine(settingsDirectory, "app-settings.json");
+            var json = JsonSerializer.Serialize(_appSettings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(settingsPath, json);
+        }
+        catch (Exception ex)
+        {
+            LogError("APP_SETTINGS_SAVE", ex, basemapId);
+        }
+    }
+
+    private static AppSettings LoadAppSettings()
+    {
+        try
+        {
+            var settingsPath = Path.Combine(GetSettingsDirectory(), "app-settings.json");
+            if (!File.Exists(settingsPath))
+            {
+                return new AppSettings();
+            }
+
+            var json = File.ReadAllText(settingsPath);
+            return JsonSerializer.Deserialize<AppSettings>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new AppSettings();
+        }
+        catch
+        {
+            return new AppSettings();
+        }
+    }
+
+    private static string GetSettingsDirectory()
+    {
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GpxCut", "settings");
     }
 
     /// <summary>
@@ -726,6 +1063,79 @@ public partial class MainWindow : Window
         ExportRangeButton.IsEnabled = !_isBusy && hasRange;
         ShowProfileCheckBox.IsEnabled = !_isBusy && _currentDocument is not null;
         ProfileModeComboBox.IsEnabled = !_isBusy && _currentDocument is not null && _isProfileVisible;
+        BasemapComboBox.IsEnabled = !_isBusy && _isMapReady && _layerPolicyState.AvailableBasemaps.Count > 0;
+    }
+
+    private async void BasemapComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingBasemapSelection || !_isMapReady || _isBusy)
+        {
+            return;
+        }
+
+        if (BasemapComboBox.SelectedItem is not BasemapComboItem item)
+        {
+            return;
+        }
+
+        if (string.Equals(item.Id, _activeBasemapId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!item.Basemap.CacheAllowed)
+        {
+            var confirm = MessageBox.Show(
+                this,
+                "This basemap does not allow local tile caching by policy.\n\nUse it anyway for this session?",
+                "Basemap Policy Warning",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                RevertBasemapSelection();
+                SetStatus("Basemap change canceled by policy confirmation.");
+                return;
+            }
+        }
+
+        try
+        {
+            await ApplyBasemapAsync(item.Basemap);
+            var cacheLabel = item.Basemap.CacheAllowed ? item.Basemap.CacheMode : "disallowed";
+            SetStatus($"Basemap switched to '{item.Name}' (cache: {cacheLabel}, offline prefetch: {(item.Basemap.OfflinePrefetchAllowed ? "allowed" : "not allowed")}).");
+        }
+        catch (Exception ex)
+        {
+            LogError("MAP_BASEMAP_SWITCH", ex, item.Id);
+            SetStatus($"Basemap switch failed: {ex.Message}");
+        }
+    }
+
+    private void RevertBasemapSelection()
+    {
+        if (string.IsNullOrWhiteSpace(_activeBasemapId) || BasemapComboBox.ItemsSource is not IEnumerable<BasemapComboItem> items)
+        {
+            return;
+        }
+
+        var selected = items.FirstOrDefault(item =>
+            string.Equals(item.Id, _activeBasemapId, StringComparison.OrdinalIgnoreCase));
+        if (selected is null)
+        {
+            return;
+        }
+
+        _isUpdatingBasemapSelection = true;
+        try
+        {
+            BasemapComboBox.SelectedItem = selected;
+        }
+        finally
+        {
+            _isUpdatingBasemapSelection = false;
+        }
     }
 
     private int? GetSplitIndex()
@@ -1435,6 +1845,95 @@ public partial class MainWindow : Window
         string YAxis,
         string XLabel,
         string YLabel);
+
+    private sealed record BasemapLayerConfig(
+        string Id,
+        string Name,
+        string Type,
+        List<string> Tiles,
+        int TileSize,
+        int? WmtsZoomOffset,
+        int? MinZoom,
+        int? MaxZoom,
+        string Attribution,
+        string LicenseName,
+        string? LicenseUrl,
+        bool CommercialUseAllowed,
+        bool CacheAllowed,
+        string CacheMode,
+        int? MinTtlDays,
+        bool OfflinePrefetchAllowed,
+        string? Notes);
+
+    private sealed record LayerPolicyState(
+        BasemapLayerConfig EffectiveBasemap,
+        List<BasemapLayerConfig> AvailableBasemaps,
+        bool LoadedFromPolicy,
+        string? PolicyPath);
+
+    private sealed record BasemapComboItem(
+        string Id,
+        string Name,
+        BasemapLayerConfig Basemap)
+    {
+        public string DisplayName => Basemap.CacheAllowed ? Name : $"{Name} [No cache]";
+    }
+
+    private sealed class LayerPolicyDocument
+    {
+        public string? SelectedLayerId { get; set; }
+
+        public List<LayerPolicyEntry> Layers { get; set; } = [];
+    }
+
+    private sealed class LayerPolicyEntry
+    {
+        public string Id { get; set; } = string.Empty;
+
+        public string Name { get; set; } = string.Empty;
+
+        public bool EnabledByDefault { get; set; }
+
+        public string Attribution { get; set; } = "&copy; OpenStreetMap contributors";
+
+        public string LicenseName { get; set; } = "Unknown";
+
+        public string? LicenseUrl { get; set; }
+
+        public bool CommercialUseAllowed { get; set; } = true;
+
+        public bool CacheAllowed { get; set; } = true;
+
+        public string CacheMode { get; set; } = "http-headers";
+
+        public int? MinTtlDays { get; set; }
+
+        public bool OfflinePrefetchAllowed { get; set; }
+
+        public string? Notes { get; set; }
+
+        public LayerPolicyMap? Map { get; set; }
+    }
+
+    private sealed class LayerPolicyMap
+    {
+        public string Type { get; set; } = "xyz";
+
+        public List<string>? Tiles { get; set; }
+
+        public int? TileSize { get; set; }
+
+        public int? WmtsZoomOffset { get; set; }
+
+        public int? MinZoom { get; set; }
+
+        public int? MaxZoom { get; set; }
+    }
+
+    private sealed class AppSettings
+    {
+        public string? SelectedBasemapId { get; set; }
+    }
 
     private sealed record IndexedTrackPoint(int GlobalIndex, int SegmentIndex, int PointIndex, TrackPoint Point);
 }

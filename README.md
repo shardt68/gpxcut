@@ -40,6 +40,18 @@ Typical workflow:
 - Map: WebView2 + MapLibre GL JS + OSM tiles
 - GPX IO: XML streaming for large files
 
+## Basemap Layer Policy
+
+Basemap sources are configured in [src/GpxCut.App/MapAssets/layer-policies.json](src/GpxCut.App/MapAssets/layer-policies.json).
+
+- `selectedLayerId` controls the startup layer.
+- Only valid `xyz` layers with at least one tile URL are applied.
+- If the policy file is missing or invalid, the app falls back to OpenStreetMap Standard.
+- Policy fields include licensing and cache/offline constraints, so source decisions are explicit and reviewable.
+- The last selected basemap is persisted in local app settings and preferred on the next startup.
+- Basemaps with `cacheAllowed=false` require explicit user confirmation before activation.
+- The default policy now includes additional open layers for EU/DE (OpenTopoMap and basemap.de WMTS variants) plus USGS options.
+
 ## Status
 
 Early project phase: architecture, base structure, and MVP implementation are being built.
