@@ -986,6 +986,62 @@
       }
     },
     {
+      "id": "switzerland-swisstopo-topo",
+      "name": "swisstopo Pixelkarte Farbe (CH)",
+      "enabledByDefault": false,
+      "attribution": "© swisstopo",
+      "licenseName": "OGD Switzerland (check layer terms)",
+      "licenseUrl": "https://www.geo.admin.ch/en/terms-of-use.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Switzerland topo raster layer via WMTS-derived XYZ path with Time=current.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.95,
+          "minLat": 45.82,
+          "maxLon": 10.49,
+          "maxLat": 47.81
+        }
+      }
+    },
+    {
+      "id": "switzerland-swisstopo-orthofoto",
+      "name": "swisstopo SWISSIMAGE Orthofoto (CH)",
+      "enabledByDefault": false,
+      "attribution": "© swisstopo",
+      "licenseName": "OGD Switzerland (check layer terms)",
+      "licenseUrl": "https://www.geo.admin.ch/en/terms-of-use.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Switzerland orthophoto layer via WMTS-derived XYZ path with Time=current.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 5.95,
+          "minLat": 45.82,
+          "maxLon": 10.49,
+          "maxLat": 47.81
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
