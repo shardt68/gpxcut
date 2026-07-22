@@ -276,8 +276,8 @@
       }
     },
     {
-      "id": "sachsen-anhalt-dop-wms-pending",
-      "name": "Saxony-Anhalt DOP OpenData (WMS, pending)",
+      "id": "sachsen-anhalt-dop20-wms",
+      "name": "Saxony-Anhalt DOP20 OpenData (WMS)",
       "enabledByDefault": false,
       "attribution": "© LVermGeo Sachsen-Anhalt",
       "licenseName": "OpenData service (verify access and terms per metadata)",
@@ -287,12 +287,40 @@
       "cacheMode": "http-headers",
       "minTtlDays": 1,
       "offlinePrefetchAllowed": false,
-      "notes": "Official OpenData WMS endpoint identified; direct capabilities access returned 403 from current environment. Pending validation from target runtime and direct WMS renderer support.",
+      "notes": "Verified OpenData WMS GetMap endpoint (layer lsa_lvermgeo_dop20_2) returns PNG tiles and CORS headers.",
       "reviewedAt": "2026-07-22",
       "map": {
         "type": "wms",
         "tiles": [
-          "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP20_OpenData/guest?SERVICE=WMS&REQUEST=GetCapabilities"
+          "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP_WMS_OpenData/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=lsa_lvermgeo_dop20_2&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 10.5,
+          "minLat": 50.9,
+          "maxLon": 13.2,
+          "maxLat": 53.1
+        }
+      }
+    },
+    {
+      "id": "sachsen-anhalt-dop100-wms",
+      "name": "Saxony-Anhalt DOP100 OpenData (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LVermGeo Sachsen-Anhalt",
+      "licenseName": "OpenData service (verify access and terms per metadata)",
+      "licenseUrl": "https://www.geodatenportal.sachsen-anhalt.de/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified OpenData WMS GetMap endpoint (layer lsa_lvermgeo_dop100_unbesch) returns PNG tiles and CORS headers.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP_WMS_OpenData/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=lsa_lvermgeo_dop100_unbesch&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
         "tileSize": 256,
         "bounds": {
