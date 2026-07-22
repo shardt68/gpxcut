@@ -1210,6 +1210,62 @@
       }
     },
     {
+      "id": "estonia-topo-baaskaart-wms",
+      "name": "Estonia Basic/Topographic Map (EE)",
+      "enabledByDefault": false,
+      "attribution": "Base map: Republic of Estonia Land and Spatial Development Board",
+      "licenseName": "Public WMS terms by Maa- ja Ruumiamet (source attribution required)",
+      "licenseUrl": "https://geoportaal.maaamet.ee/eng/services/public-wms-wfs-p346.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Estonia tiled service via WMTS GetTile (GMC/Web Mercator), using layer kaart.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://tiles.maaamet.ee/tm/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=kaart&STYLE=default&TILEMATRIXSET=GMC&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 21.7,
+          "minLat": 57.4,
+          "maxLon": 28.3,
+          "maxLat": 59.9
+        }
+      }
+    },
+    {
+      "id": "estonia-ortho-eestifoto-wms",
+      "name": "Estonia Orthophoto (DOP) (EE)",
+      "enabledByDefault": false,
+      "attribution": "Orthophoto: Republic of Estonia Land and Spatial Development Board",
+      "licenseName": "Public WMS terms by Maa- ja Ruumiamet (source attribution required)",
+      "licenseUrl": "https://geoportaal.maaamet.ee/eng/services/public-wms-wfs-p346.html",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Estonia orthophoto via WMTS GetTile (GMC/Web Mercator), using layer foto.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://tiles.maaamet.ee/tm/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=foto&STYLE=default&TILEMATRIXSET=GMC&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 21.7,
+          "minLat": 57.4,
+          "maxLon": 28.3,
+          "maxLat": 59.9
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
