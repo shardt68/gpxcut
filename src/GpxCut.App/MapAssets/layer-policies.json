@@ -644,6 +644,36 @@
       }
     },
     {
+      "id": "baden-wuerttemberg-dop20-xyz",
+      "name": "Baden-Wuerttemberg DOP20 RGB (OpenData)",
+      "enabledByDefault": false,
+      "attribution": "© LGL Baden-Wuerttemberg, dl-de/by-2-0",
+      "licenseName": "Datenlizenz Deutschland - Namensnennung - Version 2.0",
+      "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified tile endpoint from Open GeoData Portal using DOP_20_C GeoWebCache path. map.js rewrites standard z/x/y URLs into the provider path format.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://gpxcut-proxy.local/proxy/opengeodata/tiles/DOP_20_C/{z}/{x}/{y}.jpeg"
+        ],
+        "tileSize": 256,
+        "minZoom": 9,
+        "maxZoom": 15,
+        "bounds": {
+          "minLon": 7.5,
+          "minLat": 47.5,
+          "maxLon": 10.5,
+          "maxLat": 49.9
+        }
+      }
+    },
+    {
       "id": "bayern-dop20-wms",
       "name": "Bayern DOP (WMTS)",
       "enabledByDefault": false,

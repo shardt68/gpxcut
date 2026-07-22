@@ -2,9 +2,11 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Text.Json;
+using System.Text;
 using System.Globalization;
 using System.Xml.Linq;
 using System.Net.Http;
+using System.Net;
 using GpxCut.Core.IO;
 using GpxCut.Core.Domain;
 using GpxCut.Core.Editing;
@@ -27,6 +29,10 @@ public partial class MainWindow : Window
     private static readonly HttpClient WmsCapabilitiesHttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(5)
+    };
+    private static readonly HttpClient OpenGeoDataProxyHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(10)
     };
     private static readonly Dictionary<string, (int MinZoom, int MaxZoom)> HessenZoomFallbackByLayerId =
         new(StringComparer.OrdinalIgnoreCase)
@@ -53,6 +59,8 @@ public partial class MainWindow : Window
     private const int MaxProfileSamples = 4_000;
     private const string DefaultStartupBasemapId = "osm-standard";
     private const string MapAssetsVirtualHost = "appassets.gpxcut";
+    private const string TileProxyVirtualHost = "gpxcut-proxy.local";
+    private const string OpenGeoDataProxyPathPrefix = "/proxy/opengeodata/";
     private const long WebViewDiskCacheLimitBytes = 256L * 1024L * 1024L;
     private const string ProfileModeElevationTime = "elevation-time";
     private const string ProfileModeElevationDistance = "elevation-distance";
@@ -122,6 +130,13 @@ public partial class MainWindow : Window
                     await MapWebView.EnsureCoreWebView2Async(webViewEnvironment);
                     await MapWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(layerBootstrapScript);
                     MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2OnWebMessageReceived;
+                    MapWebView.CoreWebView2.AddWebResourceRequestedFilter(
+                        $"https://{MapAssetsVirtualHost}{OpenGeoDataProxyPathPrefix}*",
+                        CoreWebView2WebResourceContext.All);
+                    MapWebView.CoreWebView2.AddWebResourceRequestedFilter(
+                        $"https://{TileProxyVirtualHost}{OpenGeoDataProxyPathPrefix}*",
+                        CoreWebView2WebResourceContext.All);
+                    MapWebView.CoreWebView2.WebResourceRequested += CoreWebView2OnWebResourceRequested;
 
                     _activeWebViewUserDataFolder = folder;
                     UpdateCacheInfoUi();
@@ -444,6 +459,110 @@ public partial class MainWindow : Window
     private void CoreWebView2OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         _ = HandleWebMessageAsync(e.WebMessageAsJson);
+    }
+
+    private async void CoreWebView2OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        if (MapWebView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(e.Request.Uri, UriKind.Absolute, out var requestUri))
+        {
+            return;
+        }
+
+        var isProxyHost = string.Equals(requestUri.Host, MapAssetsVirtualHost, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(requestUri.Host, TileProxyVirtualHost, StringComparison.OrdinalIgnoreCase);
+
+        if (!isProxyHost
+            || !requestUri.AbsolutePath.StartsWith(OpenGeoDataProxyPathPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relativePath = requestUri.AbsolutePath[OpenGeoDataProxyPathPrefix.Length..];
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            e.Response = MapWebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                null,
+                (int)HttpStatusCode.BadRequest,
+                "Bad Request",
+                "Content-Type: text/plain\r\n");
+            return;
+        }
+
+        var targetUrl = $"https://opengeodata.lgl-bw.de/{relativePath}{requestUri.Query}";
+        var deferral = e.GetDeferral();
+
+        try
+        {
+            LogError("MAP_TILE_PROXY_HIT", null, targetUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Get, targetUrl);
+            using var response = await OpenGeoDataProxyHttpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead);
+
+            LogError("MAP_TILE_PROXY_STATUS", null, $"{(int)response.StatusCode} {targetUrl}");
+
+            var responseStream = new MemoryStream();
+            await response.Content.CopyToAsync(responseStream);
+            responseStream.Position = 0;
+
+            var headersBuilder = new StringBuilder();
+            if (response.Content.Headers.ContentType is not null)
+            {
+                headersBuilder.Append("Content-Type: ")
+                    .Append(response.Content.Headers.ContentType)
+                    .Append("\r\n");
+            }
+
+            if (response.Headers.CacheControl is not null)
+            {
+                headersBuilder.Append("Cache-Control: ")
+                    .Append(response.Headers.CacheControl)
+                    .Append("\r\n");
+            }
+
+            if (response.Headers.ETag is not null)
+            {
+                headersBuilder.Append("ETag: ")
+                    .Append(response.Headers.ETag)
+                    .Append("\r\n");
+            }
+
+            if (response.Content.Headers.LastModified is not null)
+            {
+                headersBuilder.Append("Last-Modified: ")
+                    .Append(response.Content.Headers.LastModified.Value.ToString("R", CultureInfo.InvariantCulture))
+                    .Append("\r\n");
+            }
+
+            headersBuilder.Append("Access-Control-Allow-Origin: *\r\n");
+            headersBuilder.Append("Access-Control-Allow-Methods: GET, HEAD, OPTIONS\r\n");
+
+            e.Response = MapWebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                responseStream,
+                (int)response.StatusCode,
+                response.ReasonPhrase ?? "OK",
+                headersBuilder.ToString());
+        }
+        catch (Exception ex)
+        {
+            LogError("MAP_TILE_PROXY", ex, targetUrl);
+            var errorBody = Encoding.UTF8.GetBytes("Tile proxy request failed.");
+            var errorStream = new MemoryStream(errorBody);
+            e.Response = MapWebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                errorStream,
+                (int)HttpStatusCode.BadGateway,
+                "Bad Gateway",
+                "Content-Type: text/plain; charset=utf-8\r\n");
+        }
+        finally
+        {
+            deferral.Complete();
+        }
     }
 
     private async Task HandleWebMessageAsync(string webMessageJson)

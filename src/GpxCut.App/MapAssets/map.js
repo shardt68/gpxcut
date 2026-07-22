@@ -43,6 +43,15 @@
     return typeof config?.id === "string" && config.id.toLowerCase().startsWith("hessen-");
   }
 
+  function shouldConstrainToBasemapBounds(config) {
+    if (!config || !config.bounds || typeof config.id !== "string") {
+      return false;
+    }
+
+    const id = config.id.toLowerCase();
+    return id.startsWith("hessen-") || id.startsWith("baden-wuerttemberg-");
+  }
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -165,6 +174,54 @@
     );
   }
 
+  function rewriteBwDopTileUrl(url, config) {
+    if (!config || config.id !== "baden-wuerttemberg-dop20-xyz") {
+      return url;
+    }
+
+    const match = url.match(/^(https:\/\/(?:opengeodata\.lgl-bw\.de\/tiles\/DOP_20_C|gpxcut-proxy\.local\/proxy\/opengeodata\/tiles\/DOP_20_C))\/([0-9]+)\/([0-9]+)\/([0-9]+)\.(jpe?g)(\?.*)?$/i);
+    if (!match) {
+      return url;
+    }
+
+    const z = Number.parseInt(match[2], 10);
+    const x = Number.parseInt(match[3], 10);
+    const y = Number.parseInt(match[4], 10);
+    if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y) || z < 0 || x < 0 || y < 0) {
+      return url;
+    }
+
+    const matrixSize = 2 ** z;
+    const tmsY = matrixSize - 1 - y;
+    if (!Number.isFinite(tmsY) || tmsY < 0) {
+      return url;
+    }
+
+    // BW DOP uses GoogleMapsCompatible matrix naming and TMS Y orientation.
+    // Keep z/x unchanged and flip y from XYZ to TMS before building grouped path segments.
+    const providerZ = z;
+    const providerX = x;
+    const providerY = tmsY;
+    if (!Number.isFinite(providerX) || !Number.isFinite(providerY) || providerX < 0 || providerY < 0) {
+      return url;
+    }
+
+    const zString = providerZ.toString().padStart(2, "0");
+    // Grouping and index padding follow the portal's observed scheme:
+    // z9 -> /32, z10-11 -> /64, z12-13 -> /128, z14-15 -> /256, ...
+    const groupDivisor = 2 ** Math.floor((providerZ + 2) / 2);
+    const groupPad = providerZ >= 12 ? 3 : 2;
+    const tilePad = providerZ >= 12 ? 6 : 4;
+    const xGroup = Math.floor(providerX / groupDivisor).toString().padStart(groupPad, "0");
+    const yGroup = Math.floor(providerY / groupDivisor).toString().padStart(groupPad, "0");
+    const xString = providerX.toString().padStart(tilePad, "0");
+    const yString = providerY.toString().padStart(tilePad, "0");
+    const extension = match[5].toLowerCase();
+    const query = match[6] ?? "";
+
+    return `https://gpxcut-proxy.local/proxy/opengeodata/tiles/DOP_20_C/GoogleMapsCompatible_${zString}/${xGroup}_${yGroup}/${xString}_${yString}.${extension}${query}`;
+  }
+
   async function probeWmsTemplate(template) {
     const probeUrl = template.replace("{bbox-epsg-3857}", wmsProbeBboxEpsg3857);
     const controller = new AbortController();
@@ -222,9 +279,9 @@
   }
 
   function applyViewportConstraints(config, jumpIntoConstraints) {
-    const useHessenLock = isHessenBasemap(config);
+    const shouldClamp = shouldConstrainToBasemapBounds(config);
 
-    if (!useHessenLock) {
+    if (!shouldClamp) {
       map.setMinZoom(0);
       map.setMaxZoom(22);
       map.setMaxBounds(null);
@@ -232,7 +289,11 @@
     }
 
     const minZoom = Number.isFinite(config.minZoom) ? config.minZoom : 0;
-    const maxZoom = Number.isFinite(config.maxZoom) ? config.maxZoom : 22;
+    // BW DOP has native tiles only at z=9 in this integration; allow higher view zoom with overzoom.
+    // Keep source maxzoom=9, but do not lock viewport max zoom to 9.
+    const maxZoom = config.id === "baden-wuerttemberg-dop20-xyz"
+      ? 22
+      : (Number.isFinite(config.maxZoom) ? config.maxZoom : 22);
     const maxBounds = toMapMaxBounds(config.bounds);
 
     map.setMinZoom(minZoom);
@@ -335,8 +396,9 @@
     },
     transformRequest: (url, resourceType) => {
       if (resourceType === "Tile") {
+        const bwDopUrl = rewriteBwDopTileUrl(url, activeBasemap);
         return {
-          url: rewriteWmtsTileUrl(url, activeBasemap)
+          url: rewriteWmtsTileUrl(bwDopUrl, activeBasemap)
         };
       }
 
