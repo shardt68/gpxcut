@@ -1154,6 +1154,62 @@
       }
     },
     {
+      "id": "lithuania-topo-top50lks-wms",
+      "name": "Lithuania TOP50 Topographic Map (LT)",
+      "enabledByDefault": false,
+      "attribution": "© NZT / geoportal.lt",
+      "licenseName": "Public Geoportal terms (verify per service metadata)",
+      "licenseUrl": "https://www.geoportal.lt/geoportal/web/en/open-data",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Lithuania TOP50 service discovered via geoportal.lt TreeApi; uses ArcGIS REST export endpoint in EPSG:3857.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geoportal.lt/mapproxy/rest/services/nzt_top50lks/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=false&f=image"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 20.90,
+          "minLat": 53.90,
+          "maxLon": 26.90,
+          "maxLat": 56.50
+        }
+      }
+    },
+    {
+      "id": "lithuania-ortho-ort10lt-wms",
+      "name": "Lithuania ORT10LT Orthophoto (LT)",
+      "enabledByDefault": false,
+      "attribution": "© NZT / geoportal.lt",
+      "licenseName": "Public Geoportal terms (verify per service metadata)",
+      "licenseUrl": "https://www.geoportal.lt/geoportal/web/en/open-data",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official recent Lithuania ORT10LT orthophoto discovered via geoportal.lt TreeApi; uses ArcGIS REST export endpoint in EPSG:3857.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geoportal.lt/mapproxy/rest/services/nzt_ort10lt_recent/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=false&f=image"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 20.90,
+          "minLat": 53.90,
+          "maxLon": 26.90,
+          "maxLat": 56.50
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
