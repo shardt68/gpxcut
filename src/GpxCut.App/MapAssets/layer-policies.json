@@ -930,6 +930,62 @@
       }
     },
     {
+      "id": "austria-basemap-topo",
+      "name": "basemap.at Topo (AT)",
+      "enabledByDefault": false,
+      "attribution": "Datenquelle: basemap.at",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://basemap.at/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Austria topo basemap (WMTS-derived XYZ path).",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://mapsneu.wien.gv.at/basemap/geolandbasemap/normal/google3857/{z}/{y}/{x}.png"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.78,
+          "minLat": 46.36,
+          "maxLon": 17.50,
+          "maxLat": 49.04
+        }
+      }
+    },
+    {
+      "id": "austria-basemap-orthofoto",
+      "name": "basemap.at Orthofoto (AT)",
+      "enabledByDefault": false,
+      "attribution": "Datenquelle: basemap.at",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://basemap.at/orthofoto/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Official Austria orthophoto (max pixel size approx. 29 cm nationwide; 15 cm in some regions).",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "xyz",
+        "tiles": [
+          "https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.78,
+          "minLat": 46.36,
+          "maxLon": 17.50,
+          "maxLat": 49.04
+        }
+      }
+    },
+    {
       "id": "usgs-imagery-only",
       "name": "USGS Imagery Only (USA)",
       "enabledByDefault": false,
