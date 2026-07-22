@@ -220,6 +220,34 @@
       }
     },
     {
+      "id": "sachsen-dtk-2012-color-wms",
+      "name": "Sachsen DTK 2012 Color (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoSN, Freistaat Sachsen",
+      "licenseName": "Open geodata terms by Freistaat Sachsen (verify per service metadata)",
+      "licenseUrl": "https://www.geodaten.sachsen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for GeoSN topographic map layer wms_sn_dtk_2012_color. Requires WMS 1.3.0 with CRS parameter.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geodienste.sachsen.de/wms_geosn_dtk_h_pg_color/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=wms_sn_dtk_2012_color&STYLES=default&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 11.04,
+          "minLat": 49.95,
+          "maxLon": 15.30,
+          "maxLat": 52.18
+        }
+      }
+    },
+    {
       "id": "thueringen-dop-wms",
       "name": "Thuringia DOP (WMS)",
       "enabledByDefault": false,
@@ -321,6 +349,90 @@
         "type": "wms",
         "tiles": [
           "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP_WMS_OpenData/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=lsa_lvermgeo_dop100_unbesch&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 10.5,
+          "minLat": 50.9,
+          "maxLon": 13.2,
+          "maxLat": 53.1
+        }
+      }
+    },
+    {
+      "id": "bb-be-dtk50-wms",
+      "name": "Brandenburg/Berlin DTK50 Ebenen (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GeoBasis-DE/LGB, dl-de/by-2-0",
+      "licenseName": "Datenlizenz Deutschland - Namensnennung - Version 2.0",
+      "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for DTK50 topographic map (BB/BE).",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://isk.geobasis-bb.de/ows/dtk50ebenen_wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=dtk50ebenen&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 11.2,
+          "minLat": 51.3,
+          "maxLon": 14.8,
+          "maxLat": 53.6
+        }
+      }
+    },
+    {
+      "id": "thueringen-dtk-wms",
+      "name": "Thuringia Topographic Map (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© GDI-TH",
+      "licenseName": "Open geodata terms by GDI-TH/TLBG (verify per service metadata)",
+      "licenseUrl": "https://geoportal.thueringen.de",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for th_dtk topographic layer.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geoproxy.geoportal-th.de/geoproxy/services?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=th_dtk&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 9.8,
+          "minLat": 50.1,
+          "maxLon": 12.8,
+          "maxLat": 51.7
+        }
+      }
+    },
+    {
+      "id": "sachsen-anhalt-dtk50-wms",
+      "name": "Saxony-Anhalt DTK50 Color (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© LVermGeo Sachsen-Anhalt",
+      "licenseName": "OpenData service (verify access and terms per metadata)",
+      "licenseUrl": "https://www.geodatenportal.sachsen-anhalt.de/",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for DTK50 topographic map (lsa_lvermgeo_dtk50_col_1).",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DTK_WMS_OpenData/guest?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=lsa_lvermgeo_dtk50_col_1&STYLES=&FORMAT=image/png&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
         ],
         "tileSize": 256,
         "bounds": {
