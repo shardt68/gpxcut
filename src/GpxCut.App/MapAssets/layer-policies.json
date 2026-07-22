@@ -1,4 +1,4 @@
-{
+  {
   "schemaVersion": 1,
   "selectedLayerId": "osm-standard",
   "layers": [
@@ -832,6 +832,62 @@
           "minLat": 53.4,
           "maxLon": 10.4,
           "maxLat": 53.9
+        }
+      }
+    },
+    {
+      "id": "bremen-dop10-2025-wms",
+      "name": "Bremen DOP10 2025 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Landesamt GeoInformation Bremen",
+      "licenseName": "Creative Commons Namensnennung (CC BY)",
+      "licenseUrl": "https://www.geo.bremen.de/produkte/open-data-produktuebersicht-15654",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Bremen orthophoto layer dop10_2025_HB.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geodienste.bremen.de/wms_dop_lb?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=dop10_2025_HB&STYLES=&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.45,
+          "minLat": 53.00,
+          "maxLon": 9.10,
+          "maxLat": 53.35
+        }
+      }
+    },
+    {
+      "id": "bremerhaven-dop10-2025-wms",
+      "name": "Bremerhaven DOP10 2025 (WMS)",
+      "enabledByDefault": false,
+      "attribution": "© Landesamt GeoInformation Bremen",
+      "licenseName": "Creative Commons Namensnennung (CC BY)",
+      "licenseUrl": "https://www.geo.bremen.de/produkte/open-data-produktuebersicht-15654",
+      "commercialUseAllowed": true,
+      "cacheAllowed": true,
+      "cacheMode": "http-headers",
+      "minTtlDays": 1,
+      "offlinePrefetchAllowed": false,
+      "notes": "Verified WMS GetMap endpoint for Bremerhaven orthophoto layer dop10_2025_BHV.",
+      "reviewedAt": "2026-07-22",
+      "map": {
+        "type": "wms",
+        "tiles": [
+          "https://geodienste.bremen.de/wms_dop_lb?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=dop10_2025_BHV&STYLES=&FORMAT=image/png&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256"
+        ],
+        "tileSize": 256,
+        "bounds": {
+          "minLon": 8.45,
+          "minLat": 53.45,
+          "maxLon": 8.85,
+          "maxLat": 53.70
         }
       }
     },
